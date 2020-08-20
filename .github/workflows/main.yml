@@ -1,0 +1,21 @@
+name: Build Renamer
+on: push
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v1
+        with:
+          dotnet-version: '3.1.x'
+      - name: Restore nuget packages
+        run: dotnet restore
+      - name: Build DLL
+        run: dotnet build -c Release
+      - uses: actions/upload-artifact@v2
+        with:
+          name: Renamer DLL
+          path: Library/netstandard2.0/Shoko.Plugin.Renamer.dll
