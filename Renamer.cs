@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -45,29 +46,15 @@ namespace Shoko.Plugin.Renamer
                 Logger.Info($"Anime Name: {animeName}");
                 
                 // Get the episode info
-                IEpisode episodeInfo = args.EpisodeInfo.First();
+                IList<IEpisode> allEpisodesInfo = args.EpisodeInfo;
+                IEpisode firstEpisodeInfo = allEpisodesInfo.First();
+                allEpisodesInfo.RemoveAt(0);
+                
+                string paddedEpisodeNumber = GetEpisodeNumber(firstEpisodeInfo, animeInfo);
 
-                string paddedEpisodeNumber = null;
-                switch (episodeInfo.Type)
+                foreach (IEpisode otherEpisodeInfo in allEpisodesInfo)
                 {
-                    case EpisodeType.Episode:
-                        paddedEpisodeNumber = episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Episodes);
-                        break;
-                    case EpisodeType.Credits:
-                        paddedEpisodeNumber = "C" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Credits);
-                        break;
-                    case EpisodeType.Special:
-                        paddedEpisodeNumber = "S" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Specials);
-                        break;
-                    case EpisodeType.Trailer:
-                        paddedEpisodeNumber = "T" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Trailers);
-                        break;
-                    case EpisodeType.Parody:
-                        paddedEpisodeNumber = "P" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Parodies);
-                        break;
-                    case EpisodeType.Other:
-                        paddedEpisodeNumber = "O" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Others);
-                        break;
+                    paddedEpisodeNumber += '-' + GetEpisodeNumber(otherEpisodeInfo, animeInfo);
                 }
                 
                 Logger.Info($"Padded Episode Number: {paddedEpisodeNumber}");
@@ -113,6 +100,27 @@ namespace Shoko.Plugin.Renamer
             catch (Exception e)
             {
                 Logger.Error(e, $"Unable to get new filename for {args.FileInfo?.Filename}");
+            }
+        }
+
+        private string GetEpisodeNumber(IEpisode episodeInfo, IAnime animeInfo)
+        {
+            switch (episodeInfo.Type)
+            {
+                case EpisodeType.Episode:
+                    return episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Episodes);
+                case EpisodeType.Credits:
+                    return "C" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Credits);
+                case EpisodeType.Special:
+                    return "S" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Specials);
+                case EpisodeType.Trailer:
+                    return "T" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Trailers);
+                case EpisodeType.Parody:
+                    return "P" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Parodies);
+                case EpisodeType.Other:
+                    return "O" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Others);
+                default:
+                    return null;
             }
         }
 
