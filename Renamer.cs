@@ -44,20 +44,46 @@ namespace Shoko.Plugin.Renamer
                     return;
                 }
                 Logger.Info($"Anime Name: {animeName}");
-                
+
                 // Get the episode info
                 IList<IEpisode> allEpisodesInfo = args.EpisodeInfo;
                 IEpisode firstEpisodeInfo = allEpisodesInfo.First();
                 allEpisodesInfo.RemoveAt(0);
-                
-                string paddedEpisodeNumber = GetEpisodeNumber(firstEpisodeInfo, animeInfo);
 
-                foreach (IEpisode otherEpisodeInfo in allEpisodesInfo)
+                string episodeTitle = null;
+                string episodeTitleOrNumber = null;
+                
+                if (animeInfo.Type == AnimeType.Movie || firstEpisodeInfo.Type != EpisodeType.Episode)
                 {
-                    paddedEpisodeNumber += '-' + GetEpisodeNumber(otherEpisodeInfo, animeInfo);
+                    episodeTitle = firstEpisodeInfo.Titles.FirstOrDefault(title =>
+                        title.Language == TitleLanguage.English && title.Type == TitleType.Main)?.Title;
+                    
+                    foreach (IEpisode otherEpisodeInfo in allEpisodesInfo)
+                    {
+                        episodeTitle += ", " + otherEpisodeInfo.Titles.FirstOrDefault(title =>
+                            title.Language == TitleLanguage.English && title.Type == TitleType.Main)?.Title;
+                    }
+
+                    episodeTitleOrNumber = episodeTitle;
                 }
                 
-                Logger.Info($"Padded Episode Number: {paddedEpisodeNumber}");
+                if (animeInfo.Type != AnimeType.Movie)
+                {
+                    string paddedEpisodeNumber = GetEpisodeNumber(firstEpisodeInfo, animeInfo);
+
+                    foreach (IEpisode otherEpisodeInfo in allEpisodesInfo)
+                    {
+                        paddedEpisodeNumber += '-' + GetEpisodeNumber(otherEpisodeInfo, animeInfo);
+                    }
+                    
+                    // Add title if it's not of type "Episode"
+                    if (firstEpisodeInfo.Type != EpisodeType.Episode)
+                    {
+                        episodeTitleOrNumber = paddedEpisodeNumber + '-' + episodeTitle;
+                    }
+                }
+
+                Logger.Info($"Episode Number or Title: {episodeTitleOrNumber}");
                 
                 // Get the info about the file
                 IVideoFile fileInfo = args.FileInfo;
@@ -89,7 +115,7 @@ namespace Shoko.Plugin.Renamer
 
                 // The $ allows building a string with the squiggle brackets
                 // build a string like "Boku no Hero Academia - 04 (1920x1080 H264) (6B361564) [Hi10].mkv"
-                string result = $"{animeName} - {paddedEpisodeNumber} ({resolution} {videoInfo.CodecID.Split('/').LastOrDefault()?.Replace("AVC", "H264")}) ({crc}) [{releaseGroup}]{ext}";
+                string result = $"{animeName} - {episodeTitleOrNumber} ({resolution} {videoInfo.CodecID.Split('/').LastOrDefault()?.Replace("AVC", "H264")}) ({crc}) [{releaseGroup}]{ext}";
 
                 // Remove invalid characters
                 result = result.ReplaceInvalidPathCharacters();
