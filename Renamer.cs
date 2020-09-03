@@ -56,12 +56,12 @@ namespace Shoko.Plugin.Renamer
                 if (animeInfo.Type == AnimeType.Movie || firstEpisodeInfo.Type != EpisodeType.Episode)
                 {
                     episodeTitle = firstEpisodeInfo.Titles.FirstOrDefault(title =>
-                        title.Language == TitleLanguage.English && title.Type == TitleType.Main)?.Title;
+                        title.Language == TitleLanguage.English)?.Title;
                     
                     foreach (IEpisode otherEpisodeInfo in allEpisodesInfo)
                     {
                         episodeTitle += ", " + otherEpisodeInfo.Titles.FirstOrDefault(title =>
-                            title.Language == TitleLanguage.English && title.Type == TitleType.Main)?.Title;
+                            title.Language == TitleLanguage.English)?.Title;
                     }
 
                     episodeTitleOrNumber = episodeTitle;
@@ -79,7 +79,11 @@ namespace Shoko.Plugin.Renamer
                     // Add title if it's not of type "Episode"
                     if (firstEpisodeInfo.Type != EpisodeType.Episode)
                     {
-                        episodeTitleOrNumber = paddedEpisodeNumber + '-' + episodeTitle;
+                        episodeTitleOrNumber = paddedEpisodeNumber + " - " + episodeTitle;
+                    }
+                    else
+                    {
+                        episodeTitleOrNumber = paddedEpisodeNumber;
                     }
                 }
 
