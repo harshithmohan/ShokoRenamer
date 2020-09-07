@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using NLog;
 using Shoko.Plugin.Abstractions;
 using Shoko.Plugin.Abstractions.DataModels;
@@ -91,17 +92,33 @@ namespace Shoko.Plugin.Renamer
                 
                 // Get the info about the file
                 IVideoFile fileInfo = args.FileInfo;
-                
+
                 // Get the info about the video stream from the MediaInfo
                 IVideoStream videoInfo = fileInfo.MediaInfo.Video;
 
                 // Get the resolution
-                string resolution = videoInfo.Width.ToString() + 'x' + videoInfo.Height.ToString();
-                
+                string resolution = "";
+                try
+                {
+                    resolution = videoInfo.Width.ToString() + 'x' + videoInfo.Height.ToString();
+                }
+                catch (Exception)
+                {
+                    resolution = Regex.Match(fileInfo.Filename, @"\d+x\d+").Value;
+                }
+
                 Logger.Info($"Resolution: {resolution}");
 
                 // Get the codec
-                string codec = videoInfo.SimplifiedCodec;
+                string codec = "";
+                try
+                {
+                    codec = videoInfo.SimplifiedCodec;
+                }
+                catch (Exception)
+                {
+                    codec = fileInfo.Filename.Contains("HEVC") ? "HEVC" : "H264";
+                }
                 
                 Logger.Info($"Codec: {codec}");
                 
@@ -119,7 +136,7 @@ namespace Shoko.Plugin.Renamer
 
                 // The $ allows building a string with the squiggle brackets
                 // build a string like "Boku no Hero Academia - 04 (1920x1080 H264) (6B361564) [Hi10].mkv"
-                string result = $"{animeName} - {episodeTitleOrNumber} ({resolution} {videoInfo.CodecID.Split('/').LastOrDefault()?.Replace("AVC", "H264")}) ({crc}) [{releaseGroup}]{ext}";
+                string result = $"{animeName} - {episodeTitleOrNumber} ({resolution} {codec}) ({crc}) [{releaseGroup}]{ext}";
 
                 // Remove invalid characters
                 result = result.ReplaceInvalidPathCharacters();
