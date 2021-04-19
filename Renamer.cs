@@ -19,7 +19,14 @@ namespace Shoko.Plugin.Renamer
         {
             // Get the Anime Info
             IAnime animeInfo = args.AnimeInfo.FirstOrDefault();
-            
+            IAnime wrongInfo = null;
+
+            if (animeInfo != null && animeInfo.PreferredTitle.Contains("Toriko"))
+            {
+                wrongInfo = animeInfo;
+                animeInfo = args.AnimeInfo.LastOrDefault();
+            }
+
             // Get the preferred title (Overriden, as shown in Desktop)
             string animeName = animeInfo?.PreferredTitle;
             
@@ -32,6 +39,12 @@ namespace Shoko.Plugin.Renamer
 
             // Get the episode info
             IList<IEpisode> allEpisodesInfo = args.EpisodeInfo;
+
+            if (wrongInfo != null && wrongInfo.PreferredTitle.Contains("Toriko"))
+            {
+                allEpisodesInfo.RemoveAt(0);
+            }
+            
             IEpisode firstEpisodeInfo = allEpisodesInfo.First();
             allEpisodesInfo.RemoveAt(0);
 
@@ -159,6 +172,10 @@ namespace Shoko.Plugin.Renamer
 
             // Get the preferred title (Overriden, as shown in Desktop)
             var animeName = args.AnimeInfo.First().PreferredTitle.ReplaceInvalidPathCharacters();
+            if (animeName.Contains("Toriko"))
+            {
+                animeName = args.AnimeInfo.Last().PreferredTitle.RemoveInvalidPathCharacters();
+            }
 
             return (destination, animeName);
         }
