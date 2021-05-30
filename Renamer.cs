@@ -147,11 +147,11 @@ namespace Shoko.Plugin.Renamer
             switch (episodeInfo.Type)
             {
                 case EpisodeType.Episode:
-                    return episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Episodes);
+                    return episodeInfo.Number.PadZeroes(Math.Max(animeInfo.EpisodeCounts.Episodes, 2));
                 case EpisodeType.Credits:
                     return "C" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Credits);
                 case EpisodeType.Special:
-                    return "S" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Specials);
+                    return "S" + episodeInfo.Number.PadZeroes(Math.Max(animeInfo.EpisodeCounts.Episodes, 2));
                 case EpisodeType.Trailer:
                     return "T" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Trailers);
                 case EpisodeType.Parody:
