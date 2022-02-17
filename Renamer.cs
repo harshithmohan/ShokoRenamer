@@ -33,7 +33,9 @@ namespace Shoko.Plugin.Renamer
             // Filenames must be consistent (because OCD), so cancel and return if we can't make a consistent filename style
             if (string.IsNullOrEmpty(animeName))
             {
-                throw new Exception("Error in renamer: Anime name not found!");
+                Logger.Info("Error in renamer: Anime name not found!");
+                args.Cancel = true;
+                return null;
             }
             Logger.Info($"Anime Name: {animeName}");
 
