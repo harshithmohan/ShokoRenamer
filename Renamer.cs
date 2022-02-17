@@ -172,16 +172,18 @@ namespace Shoko.Plugin.Renamer
             // Get the first available import folder that is a drop destination
             var destination = args.AvailableFolders.First(a => a.DropFolderType.HasFlag(DropFolderType.Destination));
             
-            // Get the preferred title (Overriden, as shown in Desktop)
-            var animeName = args.AnimeInfo.First()?.PreferredTitle;
-            
-            if (string.IsNullOrEmpty(animeName))
+            // Get Anime Info
+            var animeInfo = args.AnimeInfo;
+
+            if (animeInfo.Count == 0)
             {
                 Logger.Info("Anime name not found!");
                 args.Cancel = true;
                 return (null, null);
             }
-
+            
+            // Get the preferred title (Overriden, as shown in Desktop)
+            var animeName = animeInfo.First().PreferredTitle;
             if (animeName.Contains("Toriko"))
             {
                 animeName = args.AnimeInfo.Last().PreferredTitle.RemoveInvalidPathCharacters();
