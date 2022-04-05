@@ -183,7 +183,7 @@ namespace Shoko.Plugin.Renamer
             }
             
             // Get the preferred title (Overriden, as shown in Desktop)
-            var animeName = animeInfo.First().PreferredTitle;
+            var animeName = animeInfo.First().PreferredTitle.RemoveInvalidPathCharacters();
             if (animeName.Contains("Toriko"))
             {
                 animeName = args.AnimeInfo.Last().PreferredTitle.RemoveInvalidPathCharacters();
