@@ -125,6 +125,13 @@ namespace Shoko.Plugin.Renamer
             string crc = fileInfo.Hashes.CRC;
             
             Logger.Info($"CRC: {crc}");
+
+            // Check for Fast Release
+            string fastRelease = "";
+            if (fileInfo.Filename.Contains("Fast_Release"))
+            {
+                fastRelease = "- Fast_Release - ";
+            }
             
             // Get the release group short name
             string releaseGroup = fileInfo.AniDBFileInfo.ReleaseGroup.ShortName;
@@ -135,7 +142,7 @@ namespace Shoko.Plugin.Renamer
 
             // The $ allows building a string with the squiggle brackets
             // build a string like "Boku no Hero Academia - 04 (1920x1080 H264) (6B361564) [Hi10].mkv"
-            string result = $"{animeName} - {episodeTitleOrNumber} ({resolution} {codec}) ({crc}) [{releaseGroup}]{ext}";
+            string result = $"{animeName} - {episodeTitleOrNumber} ({resolution} {codec}) ({crc}) {fastRelease}[{releaseGroup}]{ext}";
 
             // Remove invalid characters
             result = result.ReplaceInvalidPathCharacters();
