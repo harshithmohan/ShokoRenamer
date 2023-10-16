@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -17,20 +16,11 @@ namespace Shoko.Plugin.Renamer
 
         public string GetFilename(RenameEventArgs args)
         {
-            // Get the Anime Info
-            IAnime animeInfo = args.AnimeInfo.FirstOrDefault();
-            IAnime wrongInfo = null;
-
-            if (animeInfo != null && animeInfo.PreferredTitle.Contains("Toriko"))
-            {
-                wrongInfo = animeInfo;
-                animeInfo = args.AnimeInfo.LastOrDefault();
-            }
+            var animeInfo = args.AnimeInfo.FirstOrDefault();
 
             // Get the preferred title (Overriden, as shown in Desktop)
-            string animeName = animeInfo?.PreferredTitle;
+            var animeName = animeInfo?.PreferredTitle;
             
-            // Filenames must be consistent (because OCD), so cancel and return if we can't make a consistent filename style
             if (string.IsNullOrEmpty(animeName))
             {
                 Logger.Info("Anime name not found!");
@@ -39,15 +29,9 @@ namespace Shoko.Plugin.Renamer
             }
             Logger.Info($"Anime Name: {animeName}");
 
-            // Get the episode info
-            IList<IEpisode> allEpisodesInfo = args.EpisodeInfo;
+            var allEpisodesInfo = args.EpisodeInfo;
 
-            if (wrongInfo != null && wrongInfo.PreferredTitle.Contains("Toriko"))
-            {
-                allEpisodesInfo.RemoveAt(0);
-            }
-            
-            IEpisode firstEpisodeInfo = allEpisodesInfo.First();
+            var firstEpisodeInfo = allEpisodesInfo.First();
             allEpisodesInfo.RemoveAt(0);
 
             string episodeTitle = null;
@@ -57,11 +41,14 @@ namespace Shoko.Plugin.Renamer
             {
                 episodeTitle = firstEpisodeInfo.Titles.FirstOrDefault(title =>
                     title.Language == TitleLanguage.English)?.Title;
-                
-                foreach (IEpisode otherEpisodeInfo in allEpisodesInfo)
+
+                foreach (var otherEpisodeInfo in allEpisodesInfo)
                 {
-                    episodeTitle += ", " + otherEpisodeInfo.Titles.FirstOrDefault(title =>
-                        title.Language == TitleLanguage.English)?.Title;
+                    if (firstEpisodeInfo.Type == otherEpisodeInfo.Type)
+                    {
+                        episodeTitle += ", " + otherEpisodeInfo.Titles.FirstOrDefault(title =>
+                            title.Language == TitleLanguage.English)?.Title;
+                    }
                 }
 
                 episodeTitleOrNumber = episodeTitle;
@@ -69,34 +56,26 @@ namespace Shoko.Plugin.Renamer
             
             if (animeInfo.Type != AnimeType.Movie)
             {
-                string paddedEpisodeNumber = GetEpisodeNumber(firstEpisodeInfo, animeInfo);
+                var paddedEpisodeNumber = GetEpisodeNumber(firstEpisodeInfo, animeInfo);
 
-                foreach (IEpisode otherEpisodeInfo in allEpisodesInfo)
+                foreach (var otherEpisodeInfo in allEpisodesInfo)
                 {
-                    paddedEpisodeNumber += '-' + GetEpisodeNumber(otherEpisodeInfo, animeInfo);
+                    if (firstEpisodeInfo.Type == otherEpisodeInfo.Type)
+                        paddedEpisodeNumber += '-' + GetEpisodeNumber(otherEpisodeInfo, animeInfo);
                 }
-                
-                // Add title if it's not of type "Episode"
-                if (firstEpisodeInfo.Type != EpisodeType.Episode)
-                {
-                    episodeTitleOrNumber = paddedEpisodeNumber + " - " + episodeTitle;
-                }
-                else
-                {
-                    episodeTitleOrNumber = paddedEpisodeNumber;
-                }
+
+                episodeTitleOrNumber = firstEpisodeInfo.Type != EpisodeType.Episode
+                    ? $"{paddedEpisodeNumber} - {episodeTitle}"
+                    : paddedEpisodeNumber;
             }
 
             Logger.Info($"Episode Number or Title: {episodeTitleOrNumber}");
             
-            // Get the info about the file
-            IVideoFile fileInfo = args.FileInfo;
+            var fileInfo = args.FileInfo;
 
-            // Get the info about the video stream from the MediaInfo
-            IVideoStream videoInfo = fileInfo.MediaInfo.Video;
+            var videoInfo = fileInfo.MediaInfo.Video;
 
-            // Get the resolution
-            string resolution = "";
+            var resolution = "";
             try
             {
                 resolution = videoInfo.Width.ToString() + 'x' + videoInfo.Height.ToString();
@@ -108,8 +87,7 @@ namespace Shoko.Plugin.Renamer
 
             Logger.Info($"Resolution: {resolution}");
 
-            // Get the codec
-            string codec = "";
+            var codec = "";
             try
             {
                 codec = videoInfo.SimplifiedCodec;
@@ -121,55 +99,36 @@ namespace Shoko.Plugin.Renamer
             
             Logger.Info($"Codec: {codec}");
             
-            // Get the CRC hash
-            string crc = fileInfo.Hashes.CRC;
+            var crc = fileInfo.Hashes.CRC;
             
             Logger.Info($"CRC: {crc}");
 
-            // Check for Fast Release
-            string fastRelease = "";
-            if (fileInfo.Filename.Contains("Fast_Release"))
-            {
-                fastRelease = "- Fast_Release - ";
-            }
-            
-            // Get the release group short name
-            string releaseGroup = fileInfo.AniDBFileInfo.ReleaseGroup.ShortName;
+            var releaseGroup = fileInfo.AniDBFileInfo.ReleaseGroup.ShortName;
             Logger.Info($"Release Group: {releaseGroup}");
             
-            // Get the extension of the original filename, it includes the .
-            string ext = Path.GetExtension(fileInfo.Filename);
+            var ext = Path.GetExtension(fileInfo.Filename);
 
-            // The $ allows building a string with the squiggle brackets
             // build a string like "Boku no Hero Academia - 04 (1920x1080 H264) (6B361564) [Hi10].mkv"
-            string result = $"{animeName} - {episodeTitleOrNumber} ({resolution} {codec}) ({crc}) {fastRelease}[{releaseGroup}]{ext}";
+            var result = $"{animeName} - {episodeTitleOrNumber} ({resolution} {codec}) ({crc}) [{releaseGroup}]{ext}";
 
             // Remove invalid characters
             result = result.ReplaceInvalidPathCharacters();
 
-            // Return the result
             return result;
         }
 
-        private string GetEpisodeNumber(IEpisode episodeInfo, IAnime animeInfo)
+        private static string GetEpisodeNumber(IEpisode episodeInfo, IAnime animeInfo)
         {
-            switch (episodeInfo.Type)
+            return episodeInfo.Type switch
             {
-                case EpisodeType.Episode:
-                    return episodeInfo.Number.PadZeroes(Math.Max(animeInfo.EpisodeCounts.Episodes, 2));
-                case EpisodeType.Credits:
-                    return "C" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Credits);
-                case EpisodeType.Special:
-                    return "S" + episodeInfo.Number.PadZeroes(Math.Max(animeInfo.EpisodeCounts.Episodes, 2));
-                case EpisodeType.Trailer:
-                    return "T" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Trailers);
-                case EpisodeType.Parody:
-                    return "P" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Parodies);
-                case EpisodeType.Other:
-                    return "O" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Others);
-                default:
-                    return null;
-            }
+                EpisodeType.Episode => episodeInfo.Number.PadZeroes(Math.Max(animeInfo.EpisodeCounts.Episodes, 2)),
+                EpisodeType.Credits => "C" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Credits),
+                EpisodeType.Special => "S" + episodeInfo.Number.PadZeroes(Math.Max(animeInfo.EpisodeCounts.Episodes, 2)),
+                EpisodeType.Trailer => "T" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Trailers),
+                EpisodeType.Parody => "P" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Parodies),
+                EpisodeType.Other => "O" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Others),
+                _ => null
+            };
         }
 
         public (IImportFolder destination, string subfolder) GetDestination(MoveEventArgs args)
