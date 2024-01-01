@@ -96,8 +96,24 @@ namespace Shoko.Plugin.Renamer
             {
                 codec = fileInfo.Filename.Contains("HEVC") ? "HEVC" : "H264";
             }
-            
+
             Logger.Info($"Codec: {codec}");
+
+            var source = fileInfo.AniDBFileInfo.Source;
+
+            Logger.Info($"Source: {source}");
+
+            if (source.Contains("TV")) source = "TV";
+            else if (source.Contains("DVD")) source = "DVD";
+            else
+                source = source switch
+                {
+                    "BluRay" => "BD",
+                    "Web" => "Web",
+                    _ => ""
+                };
+
+            Logger.Info($"Simplified source: {source}");
             
             var crc = fileInfo.Hashes.CRC;
             
@@ -108,8 +124,8 @@ namespace Shoko.Plugin.Renamer
             
             var ext = Path.GetExtension(fileInfo.Filename);
 
-            // build a string like "Boku no Hero Academia - 04 (1920x1080 H264) (6B361564) [Hi10].mkv"
-            var result = $"{animeName} - {episodeTitleOrNumber} ({resolution} {codec}) ({crc}) [{releaseGroup}]{ext}";
+            // build a string like "Tokyo Revengers - 24 (1920x1080 HEVC BD) (95624E85) [Hi10].mkv"
+            var result = $"{animeName} - {episodeTitleOrNumber} ({resolution} {codec} {source}) ({crc}) [{releaseGroup}]{ext}";
 
             // Remove invalid characters
             result = result.ReplaceInvalidPathCharacters();
