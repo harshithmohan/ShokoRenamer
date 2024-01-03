@@ -103,13 +103,13 @@ namespace Shoko.Plugin.Renamer
 
             Logger.Info($"Source: {source}");
 
-            if (source.Contains("TV")) source = "TV";
-            else if (source.Contains("DVD")) source = "DVD";
+            if (source.Contains("TV")) source = " TV";
+            else if (source.Contains("DVD")) source = " DVD";
             else
                 source = source switch
                 {
-                    "BluRay" => "BD",
-                    "Web" => "Web",
+                    "BluRay" => " BD",
+                    "Web" => " Web",
                     _ => ""
                 };
 
@@ -125,7 +125,7 @@ namespace Shoko.Plugin.Renamer
             var ext = Path.GetExtension(fileInfo.Filename);
 
             // build a string like "Tokyo Revengers - 24 (1920x1080 HEVC BD) (95624E85) [Hi10].mkv"
-            var result = $"{animeName} - {episodeTitleOrNumber} ({resolution} {codec} {source}) ({crc}) [{releaseGroup}]{ext}";
+            var result = $"{animeName} - {episodeTitleOrNumber} ({resolution} {codec}{source}) ({crc}) [{releaseGroup}]{ext}";
 
             // Remove invalid characters
             result = result.ReplaceInvalidPathCharacters();
