@@ -20,7 +20,7 @@ namespace Shoko.Plugin.Renamer
 
             // Get the preferred title (Overriden, as shown in Desktop)
             var animeName = animeInfo?.PreferredTitle;
-            
+
             if (string.IsNullOrEmpty(animeName))
             {
                 Logger.Info("Anime name not found!");
@@ -29,14 +29,14 @@ namespace Shoko.Plugin.Renamer
             }
             Logger.Info($"Anime Name: {animeName}");
 
-            var allEpisodesInfo = args.EpisodeInfo;
+            var allEpisodesInfo = args.EpisodeInfo.ToList();
 
             var firstEpisodeInfo = allEpisodesInfo.First();
             allEpisodesInfo.RemoveAt(0);
 
             string episodeTitle = null;
             string episodeTitleOrNumber = null;
-            
+
             if (animeInfo.Type == AnimeType.Movie || firstEpisodeInfo.Type != EpisodeType.Episode)
             {
                 episodeTitle = firstEpisodeInfo.Titles.FirstOrDefault(title =>
@@ -53,7 +53,7 @@ namespace Shoko.Plugin.Renamer
 
                 episodeTitleOrNumber = episodeTitle;
             }
-            
+
             if (animeInfo.Type != AnimeType.Movie)
             {
                 var paddedEpisodeNumber = GetEpisodeNumber(firstEpisodeInfo, animeInfo);
@@ -70,19 +70,20 @@ namespace Shoko.Plugin.Renamer
             }
 
             Logger.Info($"Episode Number or Title: {episodeTitleOrNumber}");
-            
+
+            var videoInfo = args.VideoInfo;
             var fileInfo = args.FileInfo;
 
-            var videoInfo = fileInfo.MediaInfo.Video;
+            var videoMediaInfo = videoInfo.MediaInfo!.Video;
 
             var resolution = "";
             try
             {
-                resolution = videoInfo.Width.ToString() + 'x' + videoInfo.Height.ToString();
+                resolution = videoMediaInfo.Width.ToString() + 'x' + videoMediaInfo.Height.ToString();
             }
             catch (Exception)
             {
-                resolution = Regex.Match(fileInfo.Filename, @"\d+x\d+").Value;
+                resolution = Regex.Match(fileInfo.FileName, @"\d+x\d+").Value;
             }
 
             Logger.Info($"Resolution: {resolution}");
@@ -90,16 +91,25 @@ namespace Shoko.Plugin.Renamer
             var codec = "";
             try
             {
-                codec = videoInfo.SimplifiedCodec;
+                codec = videoMediaInfo.SimplifiedCodec;
             }
             catch (Exception)
             {
-                codec = fileInfo.Filename.Contains("HEVC") ? "HEVC" : "H264";
+                codec = fileInfo.FileName.Contains("HEVC") ? "HEVC" : "H264";
             }
 
             Logger.Info($"Codec: {codec}");
 
-            var source = fileInfo.AniDBFileInfo.Source;
+            var anidbFileInfo = videoInfo.AniDB;
+
+            if (anidbFileInfo == null)
+            {
+                Logger.Info("AniDB Info not found!");
+                args.Cancel = true;
+                return null;
+            }
+
+            var source = anidbFileInfo.Source;
 
             Logger.Info($"Source: {source}");
 
@@ -114,15 +124,15 @@ namespace Shoko.Plugin.Renamer
                 };
 
             Logger.Info($"Simplified source: {source}");
-            
-            var crc = fileInfo.Hashes.CRC;
-            
+
+            var crc = videoInfo.Hashes!.CRC;
+
             Logger.Info($"CRC: {crc}");
 
-            var releaseGroup = fileInfo.AniDBFileInfo.ReleaseGroup.ShortName;
+            var releaseGroup = anidbFileInfo.ReleaseGroup.ShortName;
             Logger.Info($"Release Group: {releaseGroup}");
-            
-            var ext = Path.GetExtension(fileInfo.Filename);
+
+            var ext = Path.GetExtension(fileInfo.FileName);
 
             // build a string like "Tokyo Revengers - 24 (1920x1080 HEVC BD) (95624E85) [Hi10].mkv"
             var result = $"{animeName} - {episodeTitleOrNumber} ({resolution} {codec}{source}) ({crc}) [{releaseGroup}]{ext}";
@@ -137,12 +147,12 @@ namespace Shoko.Plugin.Renamer
         {
             return episodeInfo.Type switch
             {
-                EpisodeType.Episode => episodeInfo.Number.PadZeroes(Math.Max(animeInfo.EpisodeCounts.Episodes, 10)),
-                EpisodeType.Credits => "C" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Credits),
-                EpisodeType.Special => "S" + episodeInfo.Number.PadZeroes(Math.Max(animeInfo.EpisodeCounts.Specials, 10)),
-                EpisodeType.Trailer => "T" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Trailers),
-                EpisodeType.Parody => "P" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Parodies),
-                EpisodeType.Other => "O" + episodeInfo.Number.PadZeroes(animeInfo.EpisodeCounts.Others),
+                EpisodeType.Episode => episodeInfo.EpisodeNumber.PadZeroes(Math.Max(animeInfo.EpisodeCounts.Episodes, 10)),
+                EpisodeType.Credits => "C" + episodeInfo.EpisodeNumber.PadZeroes(animeInfo.EpisodeCounts.Credits),
+                EpisodeType.Special => "S" + episodeInfo.EpisodeNumber.PadZeroes(Math.Max(animeInfo.EpisodeCounts.Specials, 10)),
+                EpisodeType.Trailer => "T" + episodeInfo.EpisodeNumber.PadZeroes(animeInfo.EpisodeCounts.Trailers),
+                EpisodeType.Parody => "P" + episodeInfo.EpisodeNumber.PadZeroes(animeInfo.EpisodeCounts.Parodies),
+                EpisodeType.Other => "O" + episodeInfo.EpisodeNumber.PadZeroes(animeInfo.EpisodeCounts.Others),
                 _ => null
             };
         }
@@ -153,7 +163,7 @@ namespace Shoko.Plugin.Renamer
 
             // Get the first available import folder that is a drop destination
             var destination = args.AvailableFolders.First(a => a.DropFolderType.HasFlag(DropFolderType.Destination));
-            
+
             // Get Anime Info
             var animeInfo = args.AnimeInfo;
 
@@ -163,7 +173,7 @@ namespace Shoko.Plugin.Renamer
                 args.Cancel = true;
                 return (null, null);
             }
-            
+
             // Get the preferred title (Overriden, as shown in Desktop)
             var animeName = animeInfo.First().PreferredTitle.ReplaceInvalidPathCharacters();
             if (animeName.Contains("Toriko"))
