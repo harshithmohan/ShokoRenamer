@@ -6,7 +6,7 @@
 
     <ItemGroup>
       <PackageReference Include="NLog" Version="4.6.2" />
-      <PackageReference Include="Shoko.Plugin.Abstractions" Version="2.5.0-alpha4" />
+      <PackageReference Include="Shoko.Plugin.Abstractions" Version="3.0.0-alpha1" />
     </ItemGroup>
 
 </Project>
