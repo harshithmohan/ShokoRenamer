@@ -1,17 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Text.RegularExpressions;
-using NLog;
+﻿using System.Text.RegularExpressions;
+using Microsoft.Extensions.Logging;
 using Shoko.Plugin.Abstractions;
+using Shoko.Plugin.Abstractions.Attributes;
 using Shoko.Plugin.Abstractions.DataModels;
 
 namespace Shoko.Plugin.Renamer
 {
+    [RenamerID("CustomRenamer")]
     public class Renamer : IRenamer
     {
-        private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
+        private readonly ILogger<Renamer> _logger;
+
+        public Renamer(ILogger<Renamer> logger)
+        {
+            _logger = logger;
+        }
 
         public string Name => "CustomRenamer";
 
@@ -41,7 +44,7 @@ namespace Shoko.Plugin.Renamer
             return result;
         }
 
-        private static string GetFilename(RelocationEventArgs args)
+        private string GetFilename(RelocationEventArgs args)
         {
             var animeInfo = args.AnimeInfo[0];
             var episodeInfo = args.EpisodeInfo.ToList();
@@ -51,7 +54,7 @@ namespace Shoko.Plugin.Renamer
             if (videoInfo == null)
             {
                 var errorMessage = "Video info not found!";
-                Logger.Info(errorMessage);
+                _logger.LogInformation(errorMessage);
                 return $"RENAMER_ERROR: {errorMessage}";
             }
 
@@ -61,16 +64,16 @@ namespace Shoko.Plugin.Renamer
             if (anidbFileInfo == null)
             {
                 var errorMessage = "AniDB info not found!";
-                Logger.Info(errorMessage);
+                _logger.LogInformation(errorMessage);
                 return $"RENAMER_ERROR: {errorMessage}";
             }
 
             // Get the preferred title (aka Overriden title)
             var animeName = animeInfo.PreferredTitle;
-            Logger.Info($"Anime Name: {animeName}");
+            _logger.LogInformation($"Anime Name: {animeName}");
 
             var episodeTitleOrNumber = GetEpisodeTitleOrNumber(animeInfo, episodeInfo);
-            Logger.Info($"Episode Number or Title: {episodeTitleOrNumber}");
+            _logger.LogInformation($"Episode Number or Title: {episodeTitleOrNumber}");
 
             var resolution = "";
             try
@@ -81,7 +84,7 @@ namespace Shoko.Plugin.Renamer
             {
                 resolution = Regex.Match(fileInfo.FileName, @"\d+x\d+").Value;
             }
-            Logger.Info($"Resolution: {resolution}");
+            _logger.LogInformation($"Resolution: {resolution}");
 
             var codec = "";
             try
@@ -92,10 +95,10 @@ namespace Shoko.Plugin.Renamer
             {
                 codec = fileInfo.FileName.Contains("HEVC") ? "HEVC" : "H264";
             }
-            Logger.Info($"Codec: {codec}");
+            _logger.LogInformation($"Codec: {codec}");
 
             var source = anidbFileInfo.Source;
-            Logger.Info($"Source: {source}");
+            _logger.LogInformation($"Source: {source}");
 
             if (source.Contains("TV")) source = " TV";
             else if (source.Contains("DVD")) source = " DVD";
@@ -106,13 +109,13 @@ namespace Shoko.Plugin.Renamer
                     "Web" => " Web",
                     _ => ""
                 };
-            Logger.Info($"Simplified source: {source}");
+            _logger.LogInformation($"Simplified source: {source}");
 
             var crc = videoInfo.Hashes!.CRC;
-            Logger.Info($"CRC: {crc}");
+            _logger.LogInformation($"CRC: {crc}");
 
             var releaseGroup = anidbFileInfo.ReleaseGroup.ShortName;
-            Logger.Info($"Release Group: {releaseGroup}");
+            _logger.LogInformation($"Release Group: {releaseGroup}");
 
             var ext = Path.GetExtension(fileInfo.FileName);
 
@@ -127,7 +130,7 @@ namespace Shoko.Plugin.Renamer
 
         private static string GetEpisodeTitleOrNumber(ISeries animeInfo, List<IEpisode> episodesInfo)
         {
-            string episodeTitleOrNumber = null;
+            string episodeTitleOrNumber = "";
 
             var allEpisodesTitle = episodesInfo.Select(info => info.PreferredTitle).ToList();
 

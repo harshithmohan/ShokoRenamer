@@ -6,16 +6,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
       - name: Setup dotnet
-        uses: actions/setup-dotnet@v1
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '5.0.x'
+          dotnet-version: '8.0.x'
       - name: Restore nuget packages
         run: dotnet restore
       - name: Build DLL
         run: dotnet build -c Release
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v4
         with:
           name: Renamer DLL
-          path: Library/net5.0/Shoko.Plugin.Renamer.dll
+          path: bin/Release/net8.0/Shoko.Plugin.Renamer.dll
