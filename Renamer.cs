@@ -1,116 +1,100 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using NLog;
 using Shoko.Plugin.Abstractions;
-using Shoko.Plugin.Abstractions.Attributes;
 using Shoko.Plugin.Abstractions.DataModels;
 
 namespace Shoko.Plugin.Renamer
 {
-    [Renamer("CustomRenamer", Description = "My custom renamer")]
     public class Renamer : IRenamer
     {
         private static readonly Logger Logger = LogManager.GetCurrentClassLogger();
 
-        public string GetFilename(RenameEventArgs args)
+        public string Name => "CustomRenamer";
+
+        public string Description => "My custom renamer";
+
+        public bool SupportsMoving => true;
+
+        public bool SupportsRenaming => true;
+
+        public RelocationResult GetNewPath(RelocationEventArgs args)
         {
-            var animeInfo = args.AnimeInfo.FirstOrDefault();
+            var result = new RelocationResult();
 
-            // Get the preferred title (Overriden, as shown in Desktop)
-            var animeName = animeInfo?.PreferredTitle;
+            var filename = GetFilename(args);
 
-            if (string.IsNullOrEmpty(animeName))
+            if (filename.StartsWith("RENAMER_ERROR"))
             {
-                Logger.Info("Anime name not found!");
                 args.Cancel = true;
-                return null;
-            }
-            Logger.Info($"Anime Name: {animeName}");
-
-            var allEpisodesInfo = args.EpisodeInfo.ToList();
-
-            var firstEpisodeInfo = allEpisodesInfo.First();
-            allEpisodesInfo.RemoveAt(0);
-
-            string episodeTitle = null;
-            string episodeTitleOrNumber = null;
-
-            if (animeInfo.Type == AnimeType.Movie || firstEpisodeInfo.Type != EpisodeType.Episode)
-            {
-                episodeTitle = firstEpisodeInfo.Titles.FirstOrDefault(title =>
-                    title.Language == TitleLanguage.English)?.Title;
-
-                foreach (var otherEpisodeInfo in allEpisodesInfo)
-                {
-                    if (firstEpisodeInfo.Type == otherEpisodeInfo.Type)
-                    {
-                        episodeTitle += ", " + otherEpisodeInfo.Titles.FirstOrDefault(title =>
-                            title.Language == TitleLanguage.English)?.Title;
-                    }
-                }
-
-                episodeTitleOrNumber = episodeTitle;
+                result.Error = new MoveRenameError(filename.Replace("RENAMER_ERROR: ", ""));
+                return result;
             }
 
-            if (animeInfo.Type != AnimeType.Movie)
-            {
-                var paddedEpisodeNumber = GetEpisodeNumber(firstEpisodeInfo, animeInfo);
+            result.FileName = filename;
+            result.Path = args.AnimeInfo[0].PreferredTitle.ReplaceInvalidPathCharacters();
+            result.DestinationImportFolder = args.AvailableFolders.First(a => a.DropFolderType.HasFlag(DropFolderType.Destination));
 
-                foreach (var otherEpisodeInfo in allEpisodesInfo)
-                {
-                    if (firstEpisodeInfo.Type == otherEpisodeInfo.Type)
-                        paddedEpisodeNumber += '-' + GetEpisodeNumber(otherEpisodeInfo, animeInfo);
-                }
+            return result;
+        }
 
-                episodeTitleOrNumber = firstEpisodeInfo.Type != EpisodeType.Episode
-                    ? $"{paddedEpisodeNumber} - {episodeTitle}"
-                    : paddedEpisodeNumber;
-            }
-
-            Logger.Info($"Episode Number or Title: {episodeTitleOrNumber}");
-
-            var videoInfo = args.VideoInfo;
+        private static string GetFilename(RelocationEventArgs args)
+        {
+            var animeInfo = args.AnimeInfo[0];
+            var episodeInfo = args.EpisodeInfo.ToList();
+            var videoInfo = args.FileInfo.VideoInfo;
             var fileInfo = args.FileInfo;
 
-            var videoMediaInfo = videoInfo.MediaInfo!.Video;
+            if (videoInfo == null)
+            {
+                var errorMessage = "Video info not found!";
+                Logger.Info(errorMessage);
+                return $"RENAMER_ERROR: {errorMessage}";
+            }
+
+            var mediaInfo = videoInfo.MediaInfo?.Video;
+            var anidbFileInfo = videoInfo.AniDB;
+
+            if (anidbFileInfo == null)
+            {
+                var errorMessage = "AniDB info not found!";
+                Logger.Info(errorMessage);
+                return $"RENAMER_ERROR: {errorMessage}";
+            }
+
+            // Get the preferred title (aka Overriden title)
+            var animeName = animeInfo.PreferredTitle;
+            Logger.Info($"Anime Name: {animeName}");
+
+            var episodeTitleOrNumber = GetEpisodeTitleOrNumber(animeInfo, episodeInfo);
+            Logger.Info($"Episode Number or Title: {episodeTitleOrNumber}");
 
             var resolution = "";
             try
             {
-                resolution = videoMediaInfo.Width.ToString() + 'x' + videoMediaInfo.Height.ToString();
+                resolution = $"{mediaInfo!.Width}x{mediaInfo!.Height}";
             }
             catch (Exception)
             {
                 resolution = Regex.Match(fileInfo.FileName, @"\d+x\d+").Value;
             }
-
             Logger.Info($"Resolution: {resolution}");
 
             var codec = "";
             try
             {
-                codec = videoMediaInfo.SimplifiedCodec;
+                codec = mediaInfo!.SimplifiedCodec;
             }
             catch (Exception)
             {
                 codec = fileInfo.FileName.Contains("HEVC") ? "HEVC" : "H264";
             }
-
             Logger.Info($"Codec: {codec}");
 
-            var anidbFileInfo = videoInfo.AniDB;
-
-            if (anidbFileInfo == null)
-            {
-                Logger.Info("AniDB Info not found!");
-                args.Cancel = true;
-                return null;
-            }
-
             var source = anidbFileInfo.Source;
-
             Logger.Info($"Source: {source}");
 
             if (source.Contains("TV")) source = " TV";
@@ -122,11 +106,9 @@ namespace Shoko.Plugin.Renamer
                     "Web" => " Web",
                     _ => ""
                 };
-
             Logger.Info($"Simplified source: {source}");
 
             var crc = videoInfo.Hashes!.CRC;
-
             Logger.Info($"CRC: {crc}");
 
             var releaseGroup = anidbFileInfo.ReleaseGroup.ShortName;
@@ -143,45 +125,57 @@ namespace Shoko.Plugin.Renamer
             return result;
         }
 
-        private static string GetEpisodeNumber(IEpisode episodeInfo, IAnime animeInfo)
+        private static string GetEpisodeTitleOrNumber(ISeries animeInfo, List<IEpisode> episodesInfo)
         {
-            return episodeInfo.Type switch
+            string episodeTitleOrNumber = null;
+
+            var allEpisodesTitle = episodesInfo.Select(info => info.PreferredTitle).ToList();
+
+            if (animeInfo.Type == AnimeType.Movie || episodesInfo[0].Type != EpisodeType.Episode)
             {
-                EpisodeType.Episode => episodeInfo.EpisodeNumber.PadZeroes(Math.Max(animeInfo.EpisodeCounts.Episodes, 10)),
-                EpisodeType.Credits => "C" + episodeInfo.EpisodeNumber.PadZeroes(animeInfo.EpisodeCounts.Credits),
-                EpisodeType.Special => "S" + episodeInfo.EpisodeNumber.PadZeroes(Math.Max(animeInfo.EpisodeCounts.Specials, 10)),
-                EpisodeType.Trailer => "T" + episodeInfo.EpisodeNumber.PadZeroes(animeInfo.EpisodeCounts.Trailers),
-                EpisodeType.Parody => "P" + episodeInfo.EpisodeNumber.PadZeroes(animeInfo.EpisodeCounts.Parodies),
-                EpisodeType.Other => "O" + episodeInfo.EpisodeNumber.PadZeroes(animeInfo.EpisodeCounts.Others),
-                _ => null
-            };
+                episodeTitleOrNumber = string.Join(", ", allEpisodesTitle);
+            }
+
+            if (animeInfo.Type == AnimeType.Movie)
+            {
+                return episodeTitleOrNumber;
+            }
+
+            var episodeNumbers =
+                episodesInfo
+                    .Where(info => info.Type == episodesInfo[0].Type)
+                    .Select(info => GetEpisodeNumber(info, animeInfo))
+                    .ToList();
+
+            var paddedEpisodeNumber = string.Join("-", episodeNumbers);
+
+            episodeTitleOrNumber = episodesInfo[0].Type != EpisodeType.Episode
+                ? $"{paddedEpisodeNumber} - {episodeTitleOrNumber}"
+                : paddedEpisodeNumber;
+
+            return episodeTitleOrNumber;
         }
 
-        public (IImportFolder destination, string subfolder) GetDestination(MoveEventArgs args)
+        private static string GetEpisodeNumber(IEpisode episodeInfo, ISeries animeInfo)
         {
-            // Note: ReplaceInvalidPathCharacters() replaces things like slashes, pluses, etc with Unicode that looks similar
+            var episodeCount = animeInfo.EpisodeCounts[episodeInfo.Type];
 
-            // Get the first available import folder that is a drop destination
-            var destination = args.AvailableFolders.First(a => a.DropFolderType.HasFlag(DropFolderType.Destination));
-
-            // Get Anime Info
-            var animeInfo = args.AnimeInfo;
-
-            if (animeInfo.Count == 0)
+            var prefix = episodeInfo.Type switch
             {
-                Logger.Info("Anime name not found!");
-                args.Cancel = true;
-                return (null, null);
+                EpisodeType.Credits => "C",
+                EpisodeType.Special => "S",
+                EpisodeType.Trailer => "T",
+                EpisodeType.Parody => "P",
+                EpisodeType.Other => "O",
+                _ => ""
+            };
+
+            if (episodeInfo.Type is EpisodeType.Episode or EpisodeType.Special)
+            {
+                return prefix + episodeInfo.EpisodeNumber.PadZeroes(Math.Max(episodeCount, 10));
             }
 
-            // Get the preferred title (Overriden, as shown in Desktop)
-            var animeName = animeInfo.First().PreferredTitle.ReplaceInvalidPathCharacters();
-            if (animeName.Contains("Toriko"))
-            {
-                animeName = args.AnimeInfo.Last().PreferredTitle.ReplaceInvalidPathCharacters();
-            }
-
-            return (destination, animeName);
+            return prefix + episodeInfo.EpisodeNumber.PadZeroes(episodeCount);
         }
     }
 }
