@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using Shoko.Plugin.Abstractions;
 using Shoko.Plugin.Abstractions.Attributes;
 using Shoko.Plugin.Abstractions.DataModels;
+using Shoko.Plugin.Abstractions.DataModels.Shoko;
+using Shoko.Plugin.Abstractions.Events;
 
 namespace Shoko.Plugin.Renamer
 {
@@ -33,12 +35,12 @@ namespace Shoko.Plugin.Renamer
             if (filename.StartsWith("RENAMER_ERROR"))
             {
                 args.Cancel = true;
-                result.Error = new MoveRenameError(filename.Replace("RENAMER_ERROR: ", ""));
+                result.Error = new RelocationError(filename.Replace("RENAMER_ERROR: ", ""));
                 return result;
             }
 
             result.FileName = filename;
-            result.Path = args.AnimeInfo[0].PreferredTitle.ReplaceInvalidPathCharacters();
+            result.Path = args.Series[0].PreferredTitle.ReplaceInvalidPathCharacters();
             result.DestinationImportFolder = args.AvailableFolders.First(a => a.DropFolderType.HasFlag(DropFolderType.Destination));
 
             return result;
@@ -46,10 +48,10 @@ namespace Shoko.Plugin.Renamer
 
         private string GetFilename(RelocationEventArgs args)
         {
-            var animeInfo = args.AnimeInfo[0];
-            var episodeInfo = args.EpisodeInfo.ToList();
-            var videoInfo = args.FileInfo.VideoInfo;
-            var fileInfo = args.FileInfo;
+            var animeInfo = args.Series[0];
+            var episodeInfo = args.Episodes.ToList();
+            var videoInfo = args.File.Video;
+            var fileInfo = args.File;
 
             if (videoInfo == null)
             {
@@ -133,7 +135,7 @@ namespace Shoko.Plugin.Renamer
             return result;
         }
 
-        private static string GetEpisodeTitleOrNumber(ISeries animeInfo, List<IEpisode> episodesInfo)
+        private static string GetEpisodeTitleOrNumber(IShokoSeries animeInfo, List<IShokoEpisode> episodesInfo)
         {
             string episodeTitleOrNumber = "";
 
@@ -164,7 +166,7 @@ namespace Shoko.Plugin.Renamer
             return episodeTitleOrNumber;
         }
 
-        private static string GetEpisodeNumber(IEpisode episodeInfo, ISeries animeInfo)
+        private static string GetEpisodeNumber(IShokoEpisode episodeInfo, IShokoSeries animeInfo)
         {
             var episodeCount = animeInfo.EpisodeCounts[episodeInfo.Type];
 
