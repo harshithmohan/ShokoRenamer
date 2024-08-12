@@ -117,10 +117,15 @@ namespace Shoko.Plugin.Renamer
             var releaseGroup = anidbFileInfo.ReleaseGroup.ShortName;
             _logger.LogInformation($"Release Group: {releaseGroup}");
 
-            var ext = Path.GetExtension(fileInfo.FileName);
-
             // build a string like "Tokyo Revengers - 24 (1920x1080 HEVC BD) (95624E85) [Hi10].mkv"
-            var result = $"{animeName} - {episodeTitleOrNumber} ({resolution} {codec}{source}) ({crc}) [{releaseGroup}]{ext}";
+            var result = $"{animeName} - {episodeTitleOrNumber} ({resolution} {codec}{source}) ({crc}) [{releaseGroup}]";
+
+            if (fileInfo.FileName.Contains("Fast") && fileInfo.FileName.Contains("Release"))
+            {
+                result += " Fast Release";
+            }
+
+            result += Path.GetExtension(fileInfo.FileName);
 
             // Remove invalid characters
             result = result.ReplaceInvalidPathCharacters();
