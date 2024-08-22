@@ -91,7 +91,7 @@ namespace Shoko.Plugin.Renamer
             var codec = "";
             try
             {
-                codec = mediaInfo!.Codec.Simplified;
+                codec = mediaInfo!.Codec.Simplified.ToUpper();
             }
             catch (Exception)
             {
