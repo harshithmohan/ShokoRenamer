@@ -60,7 +60,7 @@ namespace Shoko.Plugin.Renamer
                 return $"RENAMER_ERROR: {errorMessage}";
             }
 
-            var mediaInfo = videoInfo.MediaInfo?.Video;
+            var mediaInfo = videoInfo.MediaInfo?.VideoStream;
             var anidbFileInfo = videoInfo.AniDB;
 
             if (anidbFileInfo == null)
@@ -91,19 +91,19 @@ namespace Shoko.Plugin.Renamer
             var codec = "";
             try
             {
-                codec = mediaInfo!.SimplifiedCodec;
+                codec = mediaInfo!.Codec.Simplified;
             }
             catch (Exception)
             {
-                codec = fileInfo.FileName.Contains("HEVC") ? "HEVC" : "H264";
+                codec = fileInfo.FileName.Contains("HEVC", StringComparison.InvariantCultureIgnoreCase) ? "HEVC" : "H264";
             }
             _logger.LogInformation($"Codec: {codec}");
 
             var source = anidbFileInfo.Source;
             _logger.LogInformation($"Source: {source}");
 
-            if (source.Contains("TV")) source = " TV";
-            else if (source.Contains("DVD")) source = " DVD";
+            if (source.Contains("TV", StringComparison.InvariantCultureIgnoreCase)) source = " TV";
+            else if (source.Contains("DVD", StringComparison.InvariantCultureIgnoreCase)) source = " DVD";
             else
                 source = source switch
                 {
@@ -122,7 +122,7 @@ namespace Shoko.Plugin.Renamer
             // build a string like "Tokyo Revengers - 24 (1920x1080 HEVC BD) (95624E85) [Hi10].mkv"
             var result = $"{animeName} - {episodeTitleOrNumber} ({resolution} {codec}{source}) ({crc}) [{releaseGroup}]";
 
-            if (fileInfo.FileName.Contains("Fast") && fileInfo.FileName.Contains("Release"))
+            if (fileInfo.FileName.Contains("Fast", StringComparison.InvariantCultureIgnoreCase) && fileInfo.FileName.Contains("Release", StringComparison.InvariantCultureIgnoreCase))
             {
                 result += " Fast Release";
             }
