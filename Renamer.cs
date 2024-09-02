@@ -9,15 +9,8 @@ using Shoko.Plugin.Abstractions.Events;
 namespace Shoko.Plugin.Renamer
 {
     [RenamerID("CustomRenamer")]
-    public class Renamer : IRenamer
+    public partial class Renamer (ILogger<Renamer> logger) : IRenamer
     {
-        private readonly ILogger<Renamer> _logger;
-
-        public Renamer(ILogger<Renamer> logger)
-        {
-            _logger = logger;
-        }
-
         public string Name => "CustomRenamer";
 
         public string Description => "My custom renamer";
@@ -55,8 +48,8 @@ namespace Shoko.Plugin.Renamer
 
             if (videoInfo == null)
             {
-                var errorMessage = "Video info not found!";
-                _logger.LogInformation(errorMessage);
+                const string errorMessage = "Video info not found!";
+                logger.LogInformation(errorMessage);
                 return $"RENAMER_ERROR: {errorMessage}";
             }
 
@@ -65,30 +58,30 @@ namespace Shoko.Plugin.Renamer
 
             if (anidbFileInfo == null)
             {
-                var errorMessage = "AniDB info not found!";
-                _logger.LogInformation(errorMessage);
+                const string errorMessage = "AniDB info not found!";
+                logger.LogInformation(errorMessage);
                 return $"RENAMER_ERROR: {errorMessage}";
             }
 
             // Get the preferred title (aka Overriden title)
             var animeName = animeInfo.PreferredTitle;
-            _logger.LogInformation($"Anime Name: {animeName}");
+            logger.LogInformation("Anime Name: {AnimeName}", animeName);
 
             var episodeTitleOrNumber = GetEpisodeTitleOrNumber(animeInfo, episodeInfo);
-            _logger.LogInformation($"Episode Number or Title: {episodeTitleOrNumber}");
+            logger.LogInformation("Episode Number or Title: {EpisodeTitleOrNumber}", episodeTitleOrNumber);
 
-            var resolution = "";
+            string resolution;
             try
             {
                 resolution = $"{mediaInfo!.Width}x{mediaInfo!.Height}";
             }
             catch (Exception)
             {
-                resolution = Regex.Match(fileInfo.FileName, @"\d+x\d+").Value;
+                resolution = MyRegex().Match(fileInfo.FileName).Value;
             }
-            _logger.LogInformation($"Resolution: {resolution}");
+            logger.LogInformation("Resolution: {Resolution}", resolution);
 
-            var codec = "";
+            string codec;
             try
             {
                 codec = mediaInfo!.Codec.Simplified.ToUpper();
@@ -97,10 +90,10 @@ namespace Shoko.Plugin.Renamer
             {
                 codec = fileInfo.FileName.Contains("HEVC", StringComparison.InvariantCultureIgnoreCase) ? "HEVC" : "H264";
             }
-            _logger.LogInformation($"Codec: {codec}");
+            logger.LogInformation("Codec: {Codec}", codec);
 
             var source = anidbFileInfo.Source;
-            _logger.LogInformation($"Source: {source}");
+            logger.LogInformation("Source: {Source}", source);
 
             if (source.Contains("TV", StringComparison.InvariantCultureIgnoreCase)) source = " TV";
             else if (source.Contains("DVD", StringComparison.InvariantCultureIgnoreCase)) source = " DVD";
@@ -111,13 +104,13 @@ namespace Shoko.Plugin.Renamer
                     "Web" => " Web",
                     _ => ""
                 };
-            _logger.LogInformation($"Simplified source: {source}");
+            logger.LogInformation("Simplified source: {Source}", source);
 
             var crc = videoInfo.Hashes!.CRC;
-            _logger.LogInformation($"CRC: {crc}");
+            logger.LogInformation("CRC: {Crc}", crc);
 
             var releaseGroup = anidbFileInfo.ReleaseGroup.ShortName;
-            _logger.LogInformation($"Release Group: {releaseGroup}");
+            logger.LogInformation("Release Group: {ReleaseGroup}", releaseGroup);
 
             // build a string like "Tokyo Revengers - 24 (1920x1080 HEVC BD) (95624E85) [Hi10].mkv"
             var result = $"{animeName} - {episodeTitleOrNumber} ({resolution} {codec}{source}) ({crc}) [{releaseGroup}]";
@@ -137,7 +130,7 @@ namespace Shoko.Plugin.Renamer
 
         private static string GetEpisodeTitleOrNumber(IShokoSeries animeInfo, List<IShokoEpisode> episodesInfo)
         {
-            string episodeTitleOrNumber = "";
+            var episodeTitleOrNumber = "";
 
             var allEpisodesTitle = episodesInfo.Select(info => info.PreferredTitle).ToList();
 
@@ -187,5 +180,8 @@ namespace Shoko.Plugin.Renamer
 
             return prefix + episodeInfo.EpisodeNumber.PadZeroes(episodeCount);
         }
+
+        [GeneratedRegex(@"\d+x\d+")]
+        private static partial Regex MyRegex();
     }
 }
