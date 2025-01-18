@@ -88,7 +88,18 @@ namespace Shoko.Plugin.Renamer
             }
             catch (Exception)
             {
-                codec = fileInfo.FileName.Contains("HEVC", StringComparison.InvariantCultureIgnoreCase) ? "HEVC" : "H264";
+                if (fileInfo.FileName.Contains("AV1", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    codec = "AV1";
+                }
+                else if (fileInfo.FileName.Contains("HEVC", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    codec = "HEVC";
+                }
+                else
+                {
+                    codec = "H264";
+                }
             }
             logger.LogInformation("Codec: {Codec}", codec);
 
