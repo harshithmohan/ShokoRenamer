@@ -32,8 +32,19 @@ namespace Shoko.Plugin.Renamer
                 return result;
             }
 
+            if (args.Groups[0].Series.Count > 1)
+            {
+                result.Path = Path.Combine(
+                    args.Groups[0].PreferredTitle.ReplaceInvalidPathCharacters(),
+                    args.Series[0].PreferredTitle.ReplaceInvalidPathCharacters()
+                );
+            }
+            else
+            {
+                result.Path = args.Series[0].PreferredTitle.ReplaceInvalidPathCharacters();
+            }
+
             result.FileName = filename;
-            result.Path = args.Series[0].PreferredTitle.ReplaceInvalidPathCharacters();
             result.DestinationImportFolder = args.AvailableFolders.First(a => a.DropFolderType.HasFlag(DropFolderType.Destination));
 
             return result;
