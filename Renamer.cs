@@ -1,77 +1,79 @@
 ﻿using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
-using Shoko.Plugin.Abstractions;
-using Shoko.Plugin.Abstractions.Attributes;
-using Shoko.Plugin.Abstractions.DataModels;
-using Shoko.Plugin.Abstractions.DataModels.Shoko;
-using Shoko.Plugin.Abstractions.Events;
+using Shoko.Abstractions.Enums;
+using Shoko.Abstractions.Extensions;
+using Shoko.Abstractions.Metadata.Shoko;
+using Shoko.Abstractions.Plugin;
+using Shoko.Abstractions.Relocation;
+using Shoko.Abstractions.Utilities;
 
 namespace Shoko.Plugin.Renamer
 {
-    [RenamerID("CustomRenamer")]
-    public partial class Renamer (ILogger<Renamer> logger) : IRenamer
+    public class Plugin : IPlugin
+    {
+        public Guid ID => UuidUtility.GetV5(typeof(Plugin).FullName!);
+
+        public string Name => nameof(Renamer);
+
+        public string Description => "My custom renamer";
+    }
+
+    public partial class Renamer (ILogger<Renamer> logger) : IRelocationProvider
     {
         public string Name => "CustomRenamer";
 
-        public string Description => "My custom renamer";
-
-        public bool SupportsMoving => true;
-
-        public bool SupportsRenaming => true;
-
-        public RelocationResult GetNewPath(RelocationEventArgs args)
+        public RelocationResult GetPath(RelocationContext ctx)
         {
             var result = new RelocationResult();
 
-            var filename = GetFilename(args);
-
-            if (filename.StartsWith("RENAMER_ERROR"))
+            string filename;
+            try
             {
-                args.Cancel = true;
-                result.Error = new RelocationError(filename.Replace("RENAMER_ERROR: ", ""));
+                filename = GetFilename(ctx);
+            }
+            catch (RenamerException e)
+            {
+                result.Error = new RelocationError(e.Message);
                 return result;
             }
 
-            if (args.Groups[0].Series.Count > 1)
+            var preferredSeriesTitle = ctx.Series[0].PreferredTitle?.Value;
+
+            if (ctx.Groups[0].Series.Count > 1)
             {
-                result.Path = Path.Combine(
-                    args.Groups[0].PreferredTitle.ReplaceInvalidPathCharacters(),
-                    args.Series[0].PreferredTitle.ReplaceInvalidPathCharacters()
-                );
+                var preferredGroupTitle = ctx.Groups[0].PreferredTitle?.Value;
+                if (preferredGroupTitle != null && preferredSeriesTitle != null)
+                {
+                    result.Path = Path.Combine(preferredGroupTitle, preferredSeriesTitle).ReplaceInvalidPathCharacters();
+                }
             }
             else
             {
-                result.Path = args.Series[0].PreferredTitle.ReplaceInvalidPathCharacters();
+                if (preferredSeriesTitle != null)
+                    result.Path = preferredSeriesTitle.ReplaceInvalidPathCharacters();
             }
 
-            result.FileName = filename;
-            result.DestinationImportFolder = args.AvailableFolders.First(a => a.DropFolderType.HasFlag(DropFolderType.Destination));
+            result.FileName = filename.ReplaceInvalidPathCharacters();
+            result.ManagedFolder = ctx.AvailableFolders.First(a => a.DropFolderType.HasFlag(DropFolderType.Destination));
 
             return result;
         }
 
-        private string GetFilename(RelocationEventArgs args)
+        private string GetFilename(RelocationContext args)
         {
             var animeInfo = args.Series[0];
             var episodeInfo = args.Episodes.ToList();
-            var videoInfo = args.File.Video;
+            var videoInfo = args.Video;
             var fileInfo = args.File;
 
-            if (videoInfo == null)
-            {
-                const string errorMessage = "Video info not found!";
-                logger.LogInformation(errorMessage);
-                return $"RENAMER_ERROR: {errorMessage}";
-            }
-
             var mediaInfo = videoInfo.MediaInfo?.VideoStream;
-            var anidbFileInfo = videoInfo.AniDB;
+            var releaseInfo = videoInfo.ReleaseInfo;
 
-            if (anidbFileInfo == null)
+            if (releaseInfo == null)
             {
-                const string errorMessage = "AniDB info not found!";
+                const string errorMessage = "Release info not found!";
                 logger.LogInformation(errorMessage);
-                return $"RENAMER_ERROR: {errorMessage}";
+                throw new RenamerException(errorMessage);
             }
 
             // Get the preferred title (aka Overriden title)
@@ -84,7 +86,7 @@ namespace Shoko.Plugin.Renamer
             string resolution;
             try
             {
-                resolution = $"{mediaInfo!.Width}x{mediaInfo!.Height}";
+                resolution = $"{mediaInfo!.Width}x{mediaInfo.Height}";
             }
             catch (Exception)
             {
@@ -114,24 +116,13 @@ namespace Shoko.Plugin.Renamer
             }
             logger.LogInformation("Codec: {Codec}", codec);
 
-            var source = anidbFileInfo.Source;
+            var source = releaseInfo.Source.ToString();
             logger.LogInformation("Source: {Source}", source);
 
-            if (source.Contains("TV", StringComparison.InvariantCultureIgnoreCase)) source = " TV";
-            else if (source.Contains("DVD", StringComparison.InvariantCultureIgnoreCase)) source = " DVD";
-            else
-                source = source switch
-                {
-                    "BluRay" => " BD",
-                    "Web" => " Web",
-                    _ => ""
-                };
-            logger.LogInformation("Simplified source: {Source}", source);
-
-            var crc = videoInfo.Hashes!.CRC;
+            var crc = videoInfo.Hashes.FirstOrDefault(hash => hash.Type.Equals("CRC32"))?.Value;
             logger.LogInformation("CRC: {Crc}", crc);
 
-            var releaseGroup = anidbFileInfo.ReleaseGroup.ShortName;
+            var releaseGroup = releaseInfo.Group?.ShortName;
             logger.LogInformation("Release Group: {ReleaseGroup}", releaseGroup);
 
             // build a string like "Tokyo Revengers - 24 (1920x1080 HEVC BD) (95624E85) [Hi10].mkv"
