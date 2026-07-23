@@ -1,11 +1,12 @@
 ﻿using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
-using Shoko.Abstractions.Enums;
 using Shoko.Abstractions.Extensions;
+using Shoko.Abstractions.Metadata.Enums;
 using Shoko.Abstractions.Metadata.Shoko;
 using Shoko.Abstractions.Plugin;
-using Shoko.Abstractions.Relocation;
 using Shoko.Abstractions.Utilities;
+using Shoko.Abstractions.Video.Enums;
+using Shoko.Abstractions.Video.Relocation;
 
 namespace Shoko.Plugin.Renamer
 {
@@ -13,12 +14,12 @@ namespace Shoko.Plugin.Renamer
     {
         public Guid ID => UuidUtility.GetV5(typeof(Plugin).FullName!);
 
-        public string Name => nameof(Renamer);
+        public string Name => nameof(MyRenamer);
 
         public string Description => "My custom renamer";
     }
 
-    public partial class Renamer (ILogger<Renamer> logger) : IRelocationProvider
+    public partial class MyRenamer (ILogger<MyRenamer> logger) : IRelocationProvider
     {
         public string Name => "CustomRenamer";
 
@@ -26,35 +27,50 @@ namespace Shoko.Plugin.Renamer
         {
             var result = new RelocationResult();
 
-            string filename;
-            try
+            if (ctx.RenameEnabled)
             {
-                filename = GetFilename(ctx);
-            }
-            catch (RenamerException e)
-            {
-                result.Error = new RelocationError(e.Message);
-                return result;
-            }
-
-            var preferredSeriesTitle = ctx.Series[0].PreferredTitle?.Value;
-
-            if (ctx.Groups[0].Series.Count > 1)
-            {
-                var preferredGroupTitle = ctx.Groups[0].PreferredTitle?.Value;
-                if (preferredGroupTitle != null && preferredSeriesTitle != null)
+                string filename;
+                try
                 {
-                    result.Path = Path.Combine(preferredGroupTitle, preferredSeriesTitle).ReplaceInvalidPathCharacters();
+                    filename = GetFilename(ctx);
                 }
+                catch (RenamerException e)
+                {
+                    result.Error = new RelocationError(e.Message);
+                    return result;
+                }
+
+                result.FileName = filename.ReplaceInvalidPathCharacters();
             }
             else
             {
-                if (preferredSeriesTitle != null)
-                    result.Path = preferredSeriesTitle.ReplaceInvalidPathCharacters();
+                result.SkipRename = true;
             }
 
-            result.FileName = filename.ReplaceInvalidPathCharacters();
-            result.ManagedFolder = ctx.AvailableFolders.First(a => a.DropFolderType.HasFlag(DropFolderType.Destination));
+            if (ctx.MoveEnabled)
+            {
+                var preferredSeriesTitle = ctx.Series[0].PreferredTitle?.Value;
+
+                if (ctx.Groups[0].Series.Count > 1)
+                {
+                    var preferredGroupTitle = ctx.Groups[0].PreferredTitle?.Value;
+                    if (preferredGroupTitle != null && preferredSeriesTitle != null)
+                    {
+                        result.Path = Path.Combine(preferredGroupTitle, preferredSeriesTitle).ReplaceInvalidPathCharacters();
+                    }
+                }
+                else
+                {
+                    if (preferredSeriesTitle != null)
+                        result.Path = preferredSeriesTitle.ReplaceInvalidPathCharacters();
+                }
+
+                result.ManagedFolder = ctx.AvailableFolders.First(a => a.DropFolderType.HasFlag(DropFolderType.Destination));
+            }
+            else
+            {
+                result.SkipMove = true;
+            }
 
             return result;
         }
