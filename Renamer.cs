@@ -143,7 +143,7 @@ namespace ShokoRenamer
             logger.LogInformation("Renaming: Anime={Anime} Episode={Episode} Resolution={Resolution} Codec={Codec} Source={Source} CRC={Crc} Group={Group}",
                 animeName, episodeTitleOrNumber, resolution, codec, source, crc, releaseGroup);
 
-            var result = $"{animeName} - {episodeTitleOrNumber} ({resolution} {codec}{source}) ({crc}) [{releaseGroup}]";
+            var result = $"{animeName} - {episodeTitleOrNumber} ({resolution} {codec} {source}) ({crc}) [{releaseGroup}]";
 
             if (fileInfo.FileName.Contains("Fast", StringComparison.OrdinalIgnoreCase) &&
                 fileInfo.FileName.Contains("Release", StringComparison.OrdinalIgnoreCase))
