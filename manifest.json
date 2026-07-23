@@ -3,7 +3,7 @@
   "name": "ShokoRenamer",
   "overview": "A Shoko renamer plugin that generates filenames in the format: {AnimeName} - {EpisodeNumber} ({Resolution} {Codec}{Source}) ({CRC}) [{ReleaseGroup}]",
   "authors": "harshithmohan",
-  "repository_url": "https://github.com/harshithmohan/Shoko.Plugin.Renamer",
+  "repository_url": "https://github.com/harshithmohan/ShokoRenamer",
   "homepage_url": null,
   "tags": [
     "relocation-provider"
