@@ -23,10 +23,9 @@ jobs:
         uses: zwaldowski/semver-release-action@v6
         id: semver
         with:
-          bump: prerelease
+          bump: patch
           github_token: ${{ secrets.GITHUB_TOKEN }}
           dry_run: true
-          preid: 'dev'
 
       - name: Publish
         run: dotnet publish -c Release -r linux-x64 -o ./publish/linux-x64
@@ -39,7 +38,7 @@ jobs:
         with:
           files: ./publish/ShokoRenamer_linux-x64.zip
           tag_name: v${{ steps.semver.outputs.version }}
-          prerelease: true
+          prerelease: false
           fail_on_unmatched_files: true
           generate_release_notes: true
         env:

@@ -9,22 +9,5 @@
     "relocation-provider"
   ],
   "image_url": null,
-  "releases": [
-    {
-      "version": "0.0.1-dev.0",
-      "tag": "v0.0.1-dev.0",
-      "source_revision": "e051e76e6c38f4f62addbd3006bdea694b8be343",
-      "released_at": "2026-07-23T16:56:52+00:00",
-      "channel": "Dev",
-      "release_notes": "**Full Changelog**: https://github.com/harshithmohan/ShokoRenamer/commits/v0.0.1-dev.0\n",
-      "archives": [
-        {
-          "runtime": "linux-x64",
-          "abstraction": "6.0.0",
-          "url": "https://github.com/harshithmohan/ShokoRenamer/releases/download/v0.0.1-dev.0/ShokoRenamer_linux-x64.zip",
-          "checksum": "28e997c346e67bf25c8a8938c5d01dc64fdd0868aaedb6856427cf834d596e2d"
-        }
-      ]
-    }
-  ]
+  "releases": []
 }
