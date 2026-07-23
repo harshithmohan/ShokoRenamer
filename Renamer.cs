@@ -14,7 +14,7 @@ namespace ShokoRenamer
     {
         public Guid ID => UuidUtility.GetV5(typeof(Plugin).FullName!);
         public string Name => "ShokoRenamer";
-        public string? Description => "ShokoRenamer";
+        public string? Description => "Automatically renames anime files to a clean, consistent format using Shoko metadata";
     }
 
     /// <summary>
@@ -24,7 +24,7 @@ namespace ShokoRenamer
     public partial class MyRenamer(ILogger<MyRenamer> logger) : IRelocationProvider
     {
         public string Name => "ShokoRenamer";
-        public string? Description => "ShokoRenamer";
+        public string? Description => "Automatically renames anime files to a clean, consistent format using Shoko metadata";
 
         public RelocationResult GetPath(RelocationContext ctx)
         {

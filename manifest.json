@@ -1,7 +1,7 @@
 {
   "id": "f432960c-3b70-53da-80e3-3bbf93acc794",
   "name": "ShokoRenamer",
-  "overview": "A Shoko renamer plugin that generates filenames in the format: {AnimeName} - {EpisodeNumber} ({Resolution} {Codec}{Source}) ({CRC}) [{ReleaseGroup}]",
+  "overview": "Automatically renames anime files using metadata from Shoko. Produces filenames like: Anime - 01 (1920x1080 HEVC BluRay) (CRC) [Group].mkv",
   "authors": "harshithmohan",
   "repository_url": "https://github.com/harshithmohan/ShokoRenamer",
   "homepage_url": null,
