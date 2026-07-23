@@ -11,6 +11,22 @@
   "image_url": null,
   "releases": [
     {
+      "version": "0.0.5",
+      "tag": "v0.0.5",
+      "source_revision": "1a5bdc66827e9fb18f489141903faf10688e4209",
+      "released_at": "2026-07-23T17:20:54+00:00",
+      "channel": "Dev",
+      "release_notes": "**Full Changelog**: https://github.com/harshithmohan/ShokoRenamer/compare/v0.0.3...v0.0.5\n",
+      "archives": [
+        {
+          "runtime": "linux-x64",
+          "abstraction": "6.0.0",
+          "url": "https://github.com/harshithmohan/ShokoRenamer/releases/download/v0.0.5/ShokoRenamer_linux-x64.zip",
+          "checksum": "207f321afa6b52e46813a0948c628980ff4cbbbf15c23645c05e562331388380"
+        }
+      ]
+    },
+    {
       "version": "0.0.3",
       "tag": "v0.0.3",
       "source_revision": "8f23e43f756f4579ddb20d0a8ed91065207fd056",
