@@ -13,34 +13,36 @@ namespace Shoko.Plugin.Renamer
     public class Plugin : IPlugin
     {
         public Guid ID => UuidUtility.GetV5(typeof(Plugin).FullName!);
-
         public string Name => nameof(MyRenamer);
-
-        public string Description => "My custom renamer";
+        public string? Description => nameof(MyRenamer);
     }
 
-    public partial class MyRenamer (ILogger<MyRenamer> logger) : IRelocationProvider
+    /// <summary>
+    /// Produces filenames in the format:
+    /// <c>{AnimeName} - {EpisodeNumber} ({Resolution} {Codec}{Source}) ({CRC}) [{ReleaseGroup}].{ext}</c>
+    /// </summary>
+    public partial class MyRenamer(ILogger<MyRenamer> logger) : IRelocationProvider
     {
-        public string Name => "CustomRenamer";
+        public string Name => "MyRenamer";
+        public string? Description => "MyRenamer";
 
         public RelocationResult GetPath(RelocationContext ctx)
         {
             var result = new RelocationResult();
 
+            // Early guard: check for series and episodes
+            if (ctx.Series.Count == 0)
+                return RelocationResult.FromError("No series found for the video file.");
+            if (ctx.Episodes.Count == 0)
+                return RelocationResult.FromError("No episodes found for the video file.");
+
             if (ctx.RenameEnabled)
             {
-                string filename;
-                try
-                {
-                    filename = GetFilename(ctx);
-                }
-                catch (RenamerException e)
-                {
-                    result.Error = new RelocationError(e.Message);
-                    return result;
-                }
-
-                result.FileName = filename.ReplaceInvalidPathCharacters();
+                var fileResult = GetFilename(ctx);
+                if (fileResult.Error != null)
+                    return fileResult;
+                result.FileName = fileResult.FileName;
+                // ReplaceInvalidPathCharacters is called inside GetFilename
             }
             else
             {
@@ -49,23 +51,34 @@ namespace Shoko.Plugin.Renamer
 
             if (ctx.MoveEnabled)
             {
-                var preferredSeriesTitle = ctx.Series[0].PreferredTitle?.Value;
+                var preferredSeriesTitle = ctx.Series[0].PreferredTitle?.Value ?? ctx.Series[0].Title;
 
-                if (ctx.Groups[0].Series.Count > 1)
+                if (ctx.Groups.Count > 0 && ctx.Groups[0].Series.Count > 1)
                 {
                     var preferredGroupTitle = ctx.Groups[0].PreferredTitle?.Value;
-                    if (preferredGroupTitle != null && preferredSeriesTitle != null)
+                    if (preferredGroupTitle != null)
                     {
                         result.Path = Path.Combine(preferredGroupTitle, preferredSeriesTitle).ReplaceInvalidPathCharacters();
+                    }
+                    else
+                    {
+                        result.SkipMove = true;
                     }
                 }
                 else
                 {
-                    if (preferredSeriesTitle != null)
-                        result.Path = preferredSeriesTitle.ReplaceInvalidPathCharacters();
+                    result.Path = preferredSeriesTitle.ReplaceInvalidPathCharacters();
                 }
 
-                result.ManagedFolder = ctx.AvailableFolders.First(a => a.DropFolderType.HasFlag(DropFolderType.Destination));
+                var destinationFolder = ctx.AvailableFolders.FirstOrDefault(a => a.DropFolderType.HasFlag(DropFolderType.Destination));
+                if (destinationFolder != null)
+                {
+                    result.ManagedFolder = destinationFolder;
+                }
+                else
+                {
+                    result.SkipMove = true;
+                }
             }
             else
             {
@@ -75,10 +88,13 @@ namespace Shoko.Plugin.Renamer
             return result;
         }
 
-        private string GetFilename(RelocationContext args)
+        /// <summary>
+        /// Generates the filename using metadata or falls back to regex/filename parsing when <c>MediaInfo</c> is unavailable.
+        /// </summary>
+        private RelocationResult GetFilename(RelocationContext args)
         {
             var animeInfo = args.Series[0];
-            var episodeInfo = args.Episodes.ToList();
+            var episodeInfo = args.Episodes;
             var videoInfo = args.Video;
             var fileInfo = args.File;
 
@@ -88,110 +104,84 @@ namespace Shoko.Plugin.Renamer
             if (releaseInfo == null)
             {
                 const string errorMessage = "Release info not found!";
-                logger.LogInformation(errorMessage);
-                throw new RenamerException(errorMessage);
+                logger.LogWarning(errorMessage);
+                return RelocationResult.FromError(errorMessage);
             }
 
-            // Get the preferred title (aka Overriden title)
-            var animeName = animeInfo.PreferredTitle;
-            logger.LogInformation("Anime Name: {AnimeName}", animeName);
-
+            var animeName = animeInfo.PreferredTitle?.Value ?? animeInfo.Title;
             var episodeTitleOrNumber = GetEpisodeTitleOrNumber(animeInfo, episodeInfo);
-            logger.LogInformation("Episode Number or Title: {EpisodeTitleOrNumber}", episodeTitleOrNumber);
 
             string resolution;
-            try
+            if (mediaInfo is not null)
             {
-                resolution = $"{mediaInfo!.Width}x{mediaInfo.Height}";
+                resolution = $"{mediaInfo.Width}x{mediaInfo.Height}";
             }
-            catch (Exception)
+            else
             {
-                resolution = MyRegex().Match(fileInfo.FileName).Value;
+                resolution = ResolutionRegex().Match(fileInfo.FileName).Value;
             }
-            logger.LogInformation("Resolution: {Resolution}", resolution);
 
             string codec;
-            try
+            if (mediaInfo is not null)
             {
-                codec = mediaInfo!.Codec.Simplified.ToUpper();
+                codec = mediaInfo.Codec.Simplified.ToUpperInvariant();
             }
-            catch (Exception)
+            else
             {
-                if (fileInfo.FileName.Contains("AV1", StringComparison.InvariantCultureIgnoreCase))
-                {
+                if (fileInfo.FileName.Contains("AV1", StringComparison.OrdinalIgnoreCase))
                     codec = "AV1";
-                }
-                else if (fileInfo.FileName.Contains("HEVC", StringComparison.InvariantCultureIgnoreCase))
-                {
+                else if (fileInfo.FileName.Contains("HEVC", StringComparison.OrdinalIgnoreCase))
                     codec = "HEVC";
-                }
                 else
-                {
                     codec = "H264";
-                }
             }
-            logger.LogInformation("Codec: {Codec}", codec);
 
             var source = releaseInfo.Source.ToString();
-            logger.LogInformation("Source: {Source}", source);
-
             var crc = videoInfo.Hashes.FirstOrDefault(hash => hash.Type.Equals("CRC32"))?.Value;
-            logger.LogInformation("CRC: {Crc}", crc);
-
             var releaseGroup = releaseInfo.Group?.ShortName;
-            logger.LogInformation("Release Group: {ReleaseGroup}", releaseGroup);
 
-            // build a string like "Tokyo Revengers - 24 (1920x1080 HEVC BD) (95624E85) [Hi10].mkv"
+            logger.LogInformation("Renaming: Anime={Anime} Episode={Episode} Resolution={Resolution} Codec={Codec} Source={Source} CRC={Crc} Group={Group}",
+                animeName, episodeTitleOrNumber, resolution, codec, source, crc, releaseGroup);
+
             var result = $"{animeName} - {episodeTitleOrNumber} ({resolution} {codec}{source}) ({crc}) [{releaseGroup}]";
 
-            if (fileInfo.FileName.Contains("Fast", StringComparison.InvariantCultureIgnoreCase) && fileInfo.FileName.Contains("Release", StringComparison.InvariantCultureIgnoreCase))
-            {
+            if (fileInfo.FileName.Contains("Fast", StringComparison.OrdinalIgnoreCase) &&
+                fileInfo.FileName.Contains("Release", StringComparison.OrdinalIgnoreCase))
                 result += " Fast Release";
-            }
 
             result += Path.GetExtension(fileInfo.FileName);
-
-            // Remove invalid characters
             result = result.ReplaceInvalidPathCharacters();
-
-            return result;
+            return new RelocationResult { FileName = result };
         }
 
-        private static string GetEpisodeTitleOrNumber(IShokoSeries animeInfo, List<IShokoEpisode> episodesInfo)
+        /// <summary>
+        /// For Movies: returns the episode title(s).
+        /// For other types: returns episode numbers with type-based prefixes.
+        /// Non-Episode types include the title after the number (e.g. "S01 - Special Name").
+        /// </summary>
+        private static string GetEpisodeTitleOrNumber(IShokoSeries animeInfo, IReadOnlyList<IShokoEpisode> episodes)
         {
-            var episodeTitleOrNumber = "";
-
-            var allEpisodesTitle = episodesInfo.Select(info => info.PreferredTitle).ToList();
-
-            if (animeInfo.Type == AnimeType.Movie || episodesInfo[0].Type != EpisodeType.Episode)
-            {
-                episodeTitleOrNumber = string.Join(", ", allEpisodesTitle);
-            }
+            var titles = string.Join(", ", episodes.Select(e => e.PreferredTitle?.Value ?? e.Title));
 
             if (animeInfo.Type == AnimeType.Movie)
-            {
-                return episodeTitleOrNumber;
-            }
+                return titles;
 
-            var episodeNumbers =
-                episodesInfo
-                    .Where(info => info.Type == episodesInfo[0].Type)
-                    .Select(info => GetEpisodeNumber(info, animeInfo))
-                    .ToList();
+            var numbers = string.Join("-", episodes
+                .Where(e => e.Type == episodes[0].Type)
+                .Select(e => GetEpisodeNumber(e, animeInfo)));
 
-            var paddedEpisodeNumber = string.Join("-", episodeNumbers);
-
-            episodeTitleOrNumber = episodesInfo[0].Type != EpisodeType.Episode
-                ? $"{paddedEpisodeNumber} - {episodeTitleOrNumber}"
-                : paddedEpisodeNumber;
-
-            return episodeTitleOrNumber;
+            return episodes[0].Type == EpisodeType.Episode
+                ? numbers
+                : $"{numbers} - {titles}";
         }
 
+        /// <summary>
+        /// Returns episode numbers with type prefixes (S=Special, C=Credits, T=Trailer, etc.).
+        /// Uses zero-padding based on the total count per type, with a minimum of 2 digits for Episodes and Specials.
+        /// </summary>
         private static string GetEpisodeNumber(IShokoEpisode episodeInfo, IShokoSeries animeInfo)
         {
             var episodeCount = animeInfo.EpisodeCounts[episodeInfo.Type];
-
             var prefix = episodeInfo.Type switch
             {
                 EpisodeType.Credits => "C",
@@ -203,14 +193,15 @@ namespace Shoko.Plugin.Renamer
             };
 
             if (episodeInfo.Type is EpisodeType.Episode or EpisodeType.Special)
-            {
                 return prefix + episodeInfo.EpisodeNumber.PadZeroes(Math.Max(episodeCount, 10));
-            }
 
             return prefix + episodeInfo.EpisodeNumber.PadZeroes(episodeCount);
         }
 
+        /// <summary>
+        /// Matches resolution patterns like "1920x1080" in filenames when <c>MediaInfo</c> is unavailable.
+        /// </summary>
         [GeneratedRegex(@"\d+x\d+")]
-        private static partial Regex MyRegex();
+        private static partial Regex ResolutionRegex();
     }
 }
