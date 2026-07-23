@@ -67,7 +67,7 @@ jobs:
             --arg tag "v${{ steps.semver.outputs.version }}" \
             --arg source_revision "${{ github.sha }}" \
             --arg released_at "$(date -Iseconds)" \
-            --arg channel "Dev" \
+            --arg channel "Stable" \
             --arg download_url "${{ steps.release.outputs.download_url }}" \
             --arg checksum "${{ steps.release.outputs.checksum }}" \
             --arg abstraction "${{ steps.abstraction.outputs.version }}" \
