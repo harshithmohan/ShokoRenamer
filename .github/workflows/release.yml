@@ -28,15 +28,15 @@ jobs:
           dry_run: true
 
       - name: Publish
-        run: dotnet publish -c Release -r linux-x64 -o ./publish/linux-x64
+        run: dotnet publish -c Release -o ./publish
 
       - name: Create zip
-        run: (cd ./publish/linux-x64 && zip -r ../ShokoRenamer_linux-x64.zip .)
+        run: (cd ./publish && zip -r ../ShokoRenamer.zip .)
 
       - name: Create Release
         uses: softprops/action-gh-release@v3
         with:
-          files: ./publish/ShokoRenamer_linux-x64.zip
+          files: ./publish/ShokoRenamer.zip
           tag_name: v${{ steps.semver.outputs.version }}
           prerelease: false
           fail_on_unmatched_files: true
@@ -80,7 +80,7 @@ jobs:
               channel: $channel,
               release_notes: $release_notes,
               archives: [{
-                runtime: "linux-x64",
+                runtime: "any",
                 abstraction: $abstraction,
                 url: $download_url,
                 checksum: $checksum
