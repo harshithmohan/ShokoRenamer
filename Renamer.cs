@@ -21,7 +21,7 @@ namespace ShokoRenamer
     /// Produces filenames in the format:
     /// <c>{AnimeName} - {EpisodeNumber} ({Resolution} {Codec}{Source}) ({CRC}) [{ReleaseGroup}].{ext}</c>
     /// </summary>
-    public partial class MyRenamer(ILogger<MyRenamer> logger) : IRelocationProvider
+    public partial class ShokoRenamer(ILogger<ShokoRenamer> logger) : IRelocationProvider
     {
         public string Name => "ShokoRenamer";
         public string? Description => "Automatically renames anime files to a clean, consistent format using Shoko metadata";
