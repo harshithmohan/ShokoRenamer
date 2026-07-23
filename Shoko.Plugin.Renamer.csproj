@@ -4,6 +4,8 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <EnableDynamicLoading>true</EnableDynamicLoading>
+        <Deterministic>true</Deterministic>
+        <RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
     </PropertyGroup>
 
     <ItemGroup>

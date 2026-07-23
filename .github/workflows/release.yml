@@ -1,0 +1,98 @@
+name: Build and Release
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup dotnet
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Get new version
+        uses: zwaldowski/semver-release-action@v6
+        id: semver
+        with:
+          bump: prerelease
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          dry_run: true
+          preid: 'dev'
+
+      - name: Publish
+        run: dotnet publish -c Release -r linux-x64 -o ./publish/linux-x64
+
+      - name: Create zip
+        run: (cd ./publish/linux-x64 && zip -r ../ShokoRenamer_linux-x64.zip .)
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: ./publish/ShokoRenamer_linux-x64.zip
+          tag_name: v${{ steps.semver.outputs.version }}
+          prerelease: true
+          fail_on_unmatched_files: true
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get release data
+        id: release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          RELEASE=$(gh api "repos/${{ github.repository }}/releases/tags/v${{ steps.semver.outputs.version }}")
+          echo "$RELEASE" | jq -r '.body' > /tmp/release-body.txt
+          echo "download_url=$(echo "$RELEASE" | jq -r '.assets[0].browser_download_url')" >> "$GITHUB_OUTPUT"
+          echo "checksum=$(echo "$RELEASE" | jq -r '.assets[0].digest' | sed 's/^sha256://')" >> "$GITHUB_OUTPUT"
+
+      - name: Get abstraction version
+        id: abstraction
+        run: |
+          VERSION=$(sed -n 's/.*Shoko\.Abstractions.*Version="\([^-"]*\).*/\1/p' Shoko.Plugin.Renamer.csproj | head -1)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Update manifest
+        run: |
+          NEW_ENTRY=$(jq -n \
+            --arg version "${{ steps.semver.outputs.version }}" \
+            --arg tag "v${{ steps.semver.outputs.version }}" \
+            --arg source_revision "${{ github.sha }}" \
+            --arg released_at "$(date -Iseconds)" \
+            --arg channel "Dev" \
+            --arg download_url "${{ steps.release.outputs.download_url }}" \
+            --arg checksum "${{ steps.release.outputs.checksum }}" \
+            --arg abstraction "${{ steps.abstraction.outputs.version }}" \
+            --rawfile release_notes /tmp/release-body.txt \
+            '{
+              version: $version,
+              tag: $tag,
+              source_revision: $source_revision,
+              released_at: $released_at,
+              channel: $channel,
+              release_notes: $release_notes,
+              archives: [{
+                runtime: "linux-x64",
+                abstraction: $abstraction,
+                url: $download_url,
+                checksum: $checksum
+              }]
+            }')
+
+          jq --argjson e "$NEW_ENTRY" '
+            .releases |= ([$e] + map(select(.version != $e.version or .channel != $e.channel)) | .[:5])
+          ' manifest.json > manifest.json.tmp && mv manifest.json.tmp manifest.json
+
+      - uses: stefanzweifel/git-auto-commit-action@v7
+        with:
+          commit_message: 'ci: update manifest for v${{ steps.semver.outputs.version }}'
+          file_pattern: manifest.json

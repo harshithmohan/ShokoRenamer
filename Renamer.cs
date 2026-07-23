@@ -8,13 +8,13 @@ using Shoko.Abstractions.Utilities;
 using Shoko.Abstractions.Video.Enums;
 using Shoko.Abstractions.Video.Relocation;
 
-namespace Shoko.Plugin.Renamer
+namespace ShokoRenamer
 {
     public class Plugin : IPlugin
     {
         public Guid ID => UuidUtility.GetV5(typeof(Plugin).FullName!);
-        public string Name => nameof(MyRenamer);
-        public string? Description => nameof(MyRenamer);
+        public string Name => "ShokoRenamer";
+        public string? Description => "ShokoRenamer";
     }
 
     /// <summary>
@@ -23,8 +23,8 @@ namespace Shoko.Plugin.Renamer
     /// </summary>
     public partial class MyRenamer(ILogger<MyRenamer> logger) : IRelocationProvider
     {
-        public string Name => "MyRenamer";
-        public string? Description => "MyRenamer";
+        public string Name => "ShokoRenamer";
+        public string? Description => "ShokoRenamer";
 
         public RelocationResult GetPath(RelocationContext ctx)
         {
