@@ -137,6 +137,13 @@ namespace ShokoRenamer
             }
 
             var source = releaseInfo.Source.ToString();
+
+            if (source.Contains("TV"))
+                source = "TV";
+            else if (source.Contains("DVD"))
+                source = "DVD";
+            else if (source == "BluRay")
+                source = "BD";
             var crc = videoInfo.Hashes.FirstOrDefault(hash => hash.Type.Equals("CRC32"))?.Value;
             var releaseGroup = releaseInfo.Group?.ShortName;
 
