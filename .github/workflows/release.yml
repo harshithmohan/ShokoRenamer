@@ -65,7 +65,6 @@ jobs:
           NEW_ENTRY=$(jq -n \
             --arg version "${{ steps.semver.outputs.version }}" \
             --arg tag "v${{ steps.semver.outputs.version }}" \
-            --arg source_revision "${{ github.sha }}" \
             --arg released_at "$(date -Iseconds)" \
             --arg channel "Stable" \
             --arg download_url "${{ steps.release.outputs.download_url }}" \
@@ -75,7 +74,6 @@ jobs:
             '{
               version: $version,
               tag: $tag,
-              source_revision: $source_revision,
               released_at: $released_at,
               channel: $channel,
               release_notes: $release_notes,
