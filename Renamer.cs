@@ -58,7 +58,9 @@ namespace ShokoRenamer
                     var preferredGroupTitle = ctx.Groups[0].PreferredTitle?.Value;
                     if (preferredGroupTitle != null)
                     {
-                        result.Path = Path.Combine(preferredGroupTitle, preferredSeriesTitle).ReplaceInvalidPathCharacters();
+                        result.Path = Path.Combine(
+                            preferredGroupTitle.ReplaceInvalidPathCharacters(),
+                            preferredSeriesTitle.ReplaceInvalidPathCharacters());
                     }
                     else
                     {
