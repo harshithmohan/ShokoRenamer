@@ -53,10 +53,11 @@ namespace ShokoRenamer
             {
                 var preferredSeriesTitle = ctx.Series[0].PreferredTitle?.Value ?? ctx.Series[0].Title;
 
-                if (ctx.Groups.Count > 0 && ctx.Groups[0].Series.Count > 1)
+                var parentGroup = ctx.Series[0].ParentGroup;
+                if (parentGroup?.AllSeries.Count > 1)
                 {
-                    var preferredGroupTitle = ctx.Groups[0].PreferredTitle?.Value;
-                    if (preferredGroupTitle != null)
+                    var preferredGroupTitle = parentGroup.PreferredTitle?.Value;
+                    if (!string.IsNullOrEmpty(preferredGroupTitle))
                     {
                         result.Path = Path.Combine(
                             preferredGroupTitle.ReplaceInvalidPathCharacters(),
@@ -132,27 +133,37 @@ namespace ShokoRenamer
             {
                 if (fileInfo.FileName.Contains("AV1", StringComparison.OrdinalIgnoreCase))
                     codec = "AV1";
-                else if (fileInfo.FileName.Contains("HEVC", StringComparison.OrdinalIgnoreCase))
+                else if (fileInfo.FileName.Contains("HEVC", StringComparison.OrdinalIgnoreCase) ||
+                         fileInfo.FileName.Contains("x265", StringComparison.OrdinalIgnoreCase) ||
+                         fileInfo.FileName.Contains("H265", StringComparison.OrdinalIgnoreCase) ||
+                         fileInfo.FileName.Contains("H.265", StringComparison.OrdinalIgnoreCase))
                     codec = "HEVC";
                 else
                     codec = "H264";
             }
 
-            var source = releaseInfo.Source.ToString();
-
-            if (source.Contains("TV"))
-                source = "TV";
-            else if (source.Contains("DVD"))
-                source = "DVD";
-            else if (source == "BluRay")
-                source = "BD";
+            var source = releaseInfo.Source switch
+            {
+                ReleaseSource.TV => "TV",
+                ReleaseSource.DVD => "DVD",
+                ReleaseSource.BluRay => "BD",
+                ReleaseSource.Unknown or ReleaseSource.Other => "",
+                _ => releaseInfo.Source.ToString(),
+            };
             var crc = videoInfo.Hashes.FirstOrDefault(hash => hash.Type.Equals("CRC32"))?.Value;
             var releaseGroup = releaseInfo.Group?.ShortName;
 
             logger.LogInformation("Renaming: Anime={Anime} Episode={Episode} Resolution={Resolution} Codec={Codec} Source={Source} CRC={Crc} Group={Group}",
                 animeName, episodeTitleOrNumber, resolution, codec, source, crc, releaseGroup);
 
-            var result = $"{animeName} - {episodeTitleOrNumber} ({resolution} {codec} {source}) ({crc}) [{releaseGroup}]";
+            var details = string.Join(" ", new[] { resolution, codec, source }
+                .Where(part => !string.IsNullOrEmpty(part)));
+
+            var result = $"{animeName} - {episodeTitleOrNumber} ({details})";
+            if (!string.IsNullOrEmpty(crc))
+                result += $" ({crc})";
+            if (!string.IsNullOrEmpty(releaseGroup))
+                result += $" [{releaseGroup}]";
 
             if (fileInfo.FileName.Contains("Fast", StringComparison.OrdinalIgnoreCase) &&
                 fileInfo.FileName.Contains("Release", StringComparison.OrdinalIgnoreCase))
@@ -170,13 +181,15 @@ namespace ShokoRenamer
         /// </summary>
         private static string GetEpisodeTitleOrNumber(IShokoSeries animeInfo, IReadOnlyList<IShokoEpisode> episodes)
         {
-            var titles = string.Join(", ", episodes.Select(e => e.PreferredTitle?.Value ?? e.Title));
+            var sameTypeEpisodes = episodes
+                .Where(e => e.Type == episodes[0].Type)
+                .ToList();
+            var titles = string.Join(", ", sameTypeEpisodes.Select(e => e.PreferredTitle?.Value ?? e.Title));
 
             if (animeInfo.Type == AnimeType.Movie)
                 return titles;
 
-            var numbers = string.Join("-", episodes
-                .Where(e => e.Type == episodes[0].Type)
+            var numbers = string.Join("-", sameTypeEpisodes
                 .Select(e => GetEpisodeNumber(e, animeInfo)));
 
             return episodes[0].Type == EpisodeType.Episode
@@ -210,7 +223,7 @@ namespace ShokoRenamer
         /// <summary>
         /// Matches resolution patterns like "1920x1080" in filenames when <c>MediaInfo</c> is unavailable.
         /// </summary>
-        [GeneratedRegex(@"\d+x\d+")]
+        [GeneratedRegex(@"\b(?:3840|2560|1920|1280|854|720|640|480)x\d+\b")]
         private static partial Regex ResolutionRegex();
     }
 }

@@ -28,10 +28,10 @@ jobs:
           dry_run: true
 
       - name: Publish
-        run: dotnet publish -c Release -o ./publish
+        run: dotnet publish -c Release -p:Version=${{ steps.semver.outputs.version }} -o ./publish
 
       - name: Create zip
-        run: (cd ./publish && zip -r ../ShokoRenamer.zip .)
+        run: (cd ./publish && zip -r ShokoRenamer.zip .)
 
       - name: Create Release
         uses: softprops/action-gh-release@v3
