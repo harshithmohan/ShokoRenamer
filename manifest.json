@@ -4,12 +4,26 @@
   "overview": "Automatically renames anime files using metadata from Shoko. Produces filenames like: Anime - 01 (1920x1080 HEVC BluRay) (CRC) [Group].mkv",
   "authors": "harshithmohan",
   "repository_url": "https://github.com/harshithmohan/ShokoRenamer",
-  "homepage_url": null,
   "tags": [
     "relocation-provider"
   ],
-  "image_url": null,
   "releases": [
+    {
+      "version": "0.0.10",
+      "tag": "v0.0.10",
+      "released_at": "2026-09-24T16:57:33.1389088Z",
+      "channel": "Dev",
+      "release_notes": "**Full Changelog**: https://github.com/harshithmohan/ShokoRenamer/compare/v0.0.9...v0.0.10",
+      "dependencies": [],
+      "archives": [
+        {
+          "runtime": "any",
+          "abstraction": "6.0.0",
+          "url": "https://github.com/harshithmohan/ShokoRenamer/releases/download/v0.0.10/ShokoRenamer-v0.0.10-any.zip",
+          "checksum": "sha256:b5a2e20dae60420ca1079ff85d2393fdcc10546f66edc9b27b4bd348b37c23aa"
+        }
+      ]
+    },
     {
       "version": "0.0.9",
       "tag": "v0.0.9",
