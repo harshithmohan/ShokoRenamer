@@ -1,5 +1,5 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shoko.Plugin.Renamer", "Shoko.Plugin.Renamer.csproj", "{1DF50BB6-98D2-44DD-B80B-665F254F110D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShokoRenamer", "ShokoRenamer.csproj", "{1DF50BB6-98D2-44DD-B80B-665F254F110D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
