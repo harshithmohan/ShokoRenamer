@@ -5,7 +5,7 @@
 A single-file Shoko relocation provider plugin. No config, no tests — one `Renamer.cs` implementing `IRelocationProvider`.
 
 - **Framework**: .NET 10.0, C# latest, `EnableDynamicLoading`
-- **Build**: `dotnet build` (has a `.sln`)
+- **Build**: `dotnet tool restore && dotnet build` (has a `.sln`, `global.json`)
 - **Plugin type**: `IRelocationProvider` (non-generic, no config) — not the old `IPlugin` system
 
 **Namespace vs directory**: The directory is `Shoko.Plugin.Renamer` but the namespace is `ShokoRenamer`. The class names match: `ShokoRenamer : IRelocationProvider`.
@@ -31,11 +31,13 @@ A single-file Shoko relocation provider plugin. No config, no tests — one `Ren
 
 ## CI (release.yml)
 
-Push to `main` → auto-bumps patch version → publishes linux-x64 → creates GitHub Release → updates `manifest.json` → auto-commits via `git-auto-commit-action`.
+Push to `main` → auto-bumps patch version → creates GitHub Release → builds with `shoko-build` → uploads archive → commits updated manifest to the **`metadata` branch only** (never `main`).
 
 - Version format: `x.y.z` (patch bump, no prerelease)
-- Only `linux-x64` runtime
-- Manifest keeps latest 5 releases
-- `abstraction` field: major.minor.patch only (drops `-alpha.xx` suffix from package version)
+- Portable `any` runtime (no RID in csproj)
+- Channel: `Dev`; manifest pruned to 5 releases per channel
+- `main` carries a stub `manifest.json` (`releases: []`); live manifest is on `metadata`
+- Local build: `dotnet tool restore && dotnet build -c Release` (targets package stamps metadata from the stub)
+- `Shoko.BuildTools.Targets` (csproj) stamps assembly metadata; `Shoko.BuildTools` tool (`shoko-build`) builds, zips, and updates the manifest
 
 **Do not commit or push without asking the user.**

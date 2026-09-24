@@ -1,4 +1,5 @@
 {
+  "$schema": "https://raw.githubusercontent.com/ShokoAnime/ShokoServer/master/Shoko.BuildTools/manifest.schema.json",
   "id": "f432960c-3b70-53da-80e3-3bbf93acc794",
   "name": "ShokoRenamer",
   "overview": "Automatically renames anime files using metadata from Shoko. Produces filenames like: Anime - 01 (1920x1080 HEVC BluRay) (CRC) [Group].mkv",
@@ -9,81 +10,5 @@
     "relocation-provider"
   ],
   "image_url": null,
-  "releases": [
-    {
-      "version": "0.0.9",
-      "tag": "v0.0.9",
-      "released_at": "2026-09-24T14:27:46+00:00",
-      "channel": "Stable",
-      "release_notes": "**Full Changelog**: https://github.com/harshithmohan/ShokoRenamer/compare/v0.0.8...v0.0.9\n",
-      "archives": [
-        {
-          "runtime": "any",
-          "abstraction": "6.0.0",
-          "url": "https://github.com/harshithmohan/ShokoRenamer/releases/download/v0.0.9/ShokoRenamer.zip",
-          "checksum": "4c9d3b63ed63b201640e989df9d7b866ae5c2848d0b70a83c80f9cd37a8c0bfa"
-        }
-      ]
-    },
-    {
-      "version": "0.0.8",
-      "tag": "v0.0.8",
-      "released_at": "2026-08-22T05:02:06+00:00",
-      "channel": "Stable",
-      "release_notes": "**Full Changelog**: https://github.com/harshithmohan/ShokoRenamer/compare/v0.0.7...v0.0.8\n",
-      "archives": [
-        {
-          "runtime": "any",
-          "abstraction": "6.0.0",
-          "url": "https://github.com/harshithmohan/ShokoRenamer/releases/download/v0.0.8/ShokoRenamer.zip",
-          "checksum": "1bd29869f78adacc689e10b1875fc182240cbe59d547ba4eb85aaef6667d2e13"
-        }
-      ]
-    },
-    {
-      "version": "0.0.7",
-      "tag": "v0.0.7",
-      "released_at": "2026-07-23T18:02:25+00:00",
-      "channel": "Stable",
-      "release_notes": "**Full Changelog**: https://github.com/harshithmohan/ShokoRenamer/compare/v0.0.6...v0.0.7\n",
-      "archives": [
-        {
-          "runtime": "any",
-          "abstraction": "6.0.0",
-          "url": "https://github.com/harshithmohan/ShokoRenamer/releases/download/v0.0.7/ShokoRenamer_linux-x64.zip",
-          "checksum": "01079ad25fcfcb829918f826322342f513d943805c6850ca44f45151e4fdb680"
-        }
-      ]
-    },
-    {
-      "version": "0.0.6",
-      "tag": "v0.0.6",
-      "released_at": "2026-07-23T17:26:27+00:00",
-      "channel": "Stable",
-      "release_notes": "**Full Changelog**: https://github.com/harshithmohan/ShokoRenamer/compare/v0.0.5...v0.0.6\n",
-      "archives": [
-        {
-          "runtime": "any",
-          "abstraction": "6.0.0",
-          "url": "https://github.com/harshithmohan/ShokoRenamer/releases/download/v0.0.6/ShokoRenamer_linux-x64.zip",
-          "checksum": "230b7cec3826b15decb7e19ebfea2bf741710df95fc167d9347a458bd55d8112"
-        }
-      ]
-    },
-    {
-      "version": "0.0.5",
-      "tag": "v0.0.5",
-      "released_at": "2026-07-23T17:20:54+00:00",
-      "channel": "Stable",
-      "release_notes": "**Full Changelog**: https://github.com/harshithmohan/ShokoRenamer/compare/v0.0.3...v0.0.5\n",
-      "archives": [
-        {
-          "runtime": "any",
-          "abstraction": "6.0.0",
-          "url": "https://github.com/harshithmohan/ShokoRenamer/releases/download/v0.0.5/ShokoRenamer_linux-x64.zip",
-          "checksum": "207f321afa6b52e46813a0948c628980ff4cbbbf15c23645c05e562331388380"
-        }
-      ]
-    }
-  ]
+  "releases": []
 }

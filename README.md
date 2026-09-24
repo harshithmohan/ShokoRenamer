@@ -19,7 +19,7 @@ If media info is unavailable, resolution is parsed from the filename fallback.
 ### Plugin Manager (Recommended)
 
 1. Open the Shoko Web UI and navigate to **Settings → Plugins → Repositories**.
-2. Add the manifest URL: `https://raw.githubusercontent.com/harshithmohan/ShokoRenamer/main/manifest.json`
+2. Add the manifest URL: `https://raw.githubusercontent.com/harshithmohan/ShokoRenamer/metadata/manifest.json`
 3. Go to **Settings → Plugins → Browse** and find **ShokoRenamer**.
 4. Click **Install** on the latest version.
 5. Restart Shoko Server.
@@ -48,3 +48,16 @@ To rename files automatically when they are imported:
 
 1. Enable **Rename On Import** and/or **Move On Import** in Shoko settings.
 2. Set your ShokoRenamer config as the **Default**.
+
+## Repository layout / release process
+
+`manifest.json` on `main` is a **stub** — real identity (id, name, overview) with `"releases": []`. The manifest that is actually published — with releases, checksums and download URLs — lives on the **`metadata` branch**. Every push to `main` runs the release workflow: it auto-increments the version (patch bump of the latest release tag), creates a GitHub release with auto-generated notes, builds the archive with `shoko-build` (pruning the manifest to the five most recent releases per channel), uploads the archive, and commits the updated manifest back to the `metadata` branch only; nothing is ever written to `main`.
+
+## Building
+
+```
+dotnet tool restore
+dotnet build -c Release
+```
+
+The plugin is portable (`any`); no runtime identifier is pinned.
